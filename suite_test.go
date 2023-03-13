@@ -3,10 +3,9 @@ package pulsarconnector
 import (
 	"context"
 	_ "embed"
-	"os"
+	"os/exec"
 
 	"net/http"
-	"os/exec"
 	"testing"
 	"time"
 
@@ -15,20 +14,17 @@ import (
 	"github.com/kubescape/pulsar-connector/config"
 
 	"github.com/apache/pulsar-client-go/pulsar"
-	"github.com/google/go-cmp/cmp"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
 const (
-	pulsarDockerCommand = `docker run --name=pulsar-test -d -p 6651:6650  -p 8081:8080 -e PULSAR_MEM=" -Xms256m -Xmx256m -XX:MaxDirectMemorySize=256m" apachepulsar/pulsar-all bin/pulsar standalone`
+	// pulsar 2.11.0
+	pulsarDockerCommand = `docker run --name=pulsar-test -d -p 6651:6650  -p 8081:8080 -e PULSAR_MEM=" -Xms256m -Xmx256m -XX:MaxDirectMemorySize=256m" docker.io/apachepulsar/pulsar@sha256:3b755fb67d49abeb7ab6a76b7123cc474375e3881526db26f43c8cfccdaa3cf6 bin/pulsar standalone`
 	pulsarStopCommand   = "docker stop pulsar-test && docker rm pulsar-test"
 )
 
-var updatedExpected = false
-
-func TestNotificationService(t *testing.T) {
+func TestBasicConnection(t *testing.T) {
 	suite.Run(t, new(MainTestSuite))
 }
 
@@ -106,25 +102,6 @@ func loadJson[T any](jsonBytes []byte) T {
 		panic(err)
 	}
 	return obj
-}
-
-func compareAndUpdate[T any](t *testing.T, actual T, expectedBytes []byte, expectedFileName string, update bool, compareOptions ...cmp.Option) {
-	expected := loadJson[T](expectedBytes)
-	diff := cmp.Diff(expected, actual, compareOptions...)
-	assert.Empty(t, diff, "expected to have no diff")
-	if update && diff != "" {
-		saveExpected(t, expectedFileName, actual)
-	}
-	assert.False(t, update, "update expected is true, set to false and rerun test")
-}
-
-func saveExpected(t *testing.T, fileName string, i interface{}) {
-	data, _ := json.MarshalIndent(i, "", "    ")
-	err := os.WriteFile(fileName, data, 0644)
-	if err != nil {
-		panic(err)
-	}
-	t.Log("Updating expected file: "+fileName, " with actual response: ", string(data))
 }
 
 func produceMessages[P TestPayload](suite *MainTestSuite, ctx context.Context, producer pulsar.Producer, payloads []P) {

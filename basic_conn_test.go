@@ -20,7 +20,7 @@ type TestPayloadImpl struct {
 	Data string `json:"data"`
 }
 
-func (p *TestPayloadImpl) GetId() string {
+func (p TestPayloadImpl) GetId() string {
 	return p.Id
 }
 
@@ -50,14 +50,14 @@ func (suite *MainTestSuite) TestConsumerAndProducer() {
 	}
 	defer consumer.Close()
 
-	testPayload := []byte("{\"id\":\"1\",\"data\":\"Hello World\"}")
+	testPayload := []byte("[{\"id\":\"1\",\"data\":\"Hello World\"},{\"id\":\"18\",\"data\":\"Hello from the other World\"}]")
 
 	//send test payloads
-	produceMessages(suite, ctx, producer, loadJson[[]TestPayload](testPayload))
+	produceMessages(suite, ctx, producer, loadJson[[]TestPayloadImpl](testPayload))
 	//consume payloads for one second
-	actualPayloads := consumeMessages[*TestPayloadImpl](suite, pubsubCtx, consumer)
+	actualPayloads := consumeMessages[TestPayloadImpl](suite, pubsubCtx, consumer)
 	//expect payloads of 2 tenants (one tenant one unsubscribed user)
-	suite.Equal(len(actualPayloads), 2, "expected 2 tenants")
+	suite.Equal(len(actualPayloads), 2, "expected 2 messages")
 	//compare with expected payloads
 	// compareAndUpdate(suite.T(), actualPayloads, expectedRecipientsPayloads, expectedRecipientsPayloadsFile, updatedExpected, ignoreTime)
 }
