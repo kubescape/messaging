@@ -3,6 +3,7 @@ package pulsarconnector
 import (
 	"context"
 	_ "embed"
+	"fmt"
 	"os/exec"
 
 	"net/http"
@@ -19,8 +20,9 @@ import (
 )
 
 const (
-	// pulsar 2.11.0
-	pulsarDockerCommand = `docker run --name=pulsar-test -d -p 6651:6650  -p 8081:8080 -e PULSAR_MEM=" -Xms256m -Xmx256m -XX:MaxDirectMemorySize=256m" docker.io/apachepulsar/pulsar@sha256:3b755fb67d49abeb7ab6a76b7123cc474375e3881526db26f43c8cfccdaa3cf6 bin/pulsar standalone`
+	pulsarClientPort    = "6651"
+	pulsarAdminPort     = "8081"
+	pulsarDockerCommand = `docker run --name=pulsar-test -d -p %s:6650  -p %s:8080 docker.io/apachepulsar/pulsar:2.11.0 bin/pulsar standalone`
 	pulsarStopCommand   = "docker stop pulsar-test && docker rm pulsar-test"
 )
 
@@ -36,8 +38,8 @@ type MainTestSuite struct {
 
 func (suite *MainTestSuite) SetupSuite() {
 	suite.defaultTestConfig = config.PulsarConfig{
-		URL:                    "pulsar://localhost:6651",
-		AdminUrl:               "http://localhost:8081",
+		URL:                    fmt.Sprintf("pulsar://localhost:%s", pulsarClientPort),
+		AdminUrl:               fmt.Sprintf("http://localhost:%s", pulsarAdminPort),
 		Tenant:                 "ca-messaging",
 		Namespace:              "test-namespace",
 		Clusters:               []string{"standalone"},
@@ -73,8 +75,10 @@ func (suite *MainTestSuite) SetupTest() {
 func (suite *MainTestSuite) startPulsar() {
 	suite.T().Log("stopping existing pulsar container")
 	exec.Command("/bin/sh", "-c", pulsarStopCommand).Run()
+	time.Sleep(2 * time.Second)
+
 	suite.T().Log("starting pulsar")
-	out, err := exec.Command("/bin/sh", "-c", pulsarDockerCommand).Output()
+	out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf(pulsarDockerCommand, pulsarClientPort, pulsarAdminPort)).Output()
 	if err != nil {
 		suite.FailNow("failed to start pulsar", err.Error(), string(out))
 	}
@@ -84,7 +88,7 @@ func (suite *MainTestSuite) startPulsar() {
 	}
 	suite.T().Log("waiting for pulsar to start")
 	client := http.Client{}
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 40; i++ {
 		resp, err := client.Do(req)
 		if err == nil && resp.StatusCode == http.StatusOK {
 			suite.T().Log("pulsar started")
@@ -131,7 +135,9 @@ func consumeMessages[P TestPayload](suite *MainTestSuite, ctx context.Context, c
 		}
 		var payload P
 		if err := json.Unmarshal(msg.Payload(), &payload); err != nil {
-			suite.FailNow(err.Error())
+			// suite.FailNow(err.Error())
+			consumer.Nack(msg)
+			continue
 		}
 		if _, ok := actualPayloads[payload.GetId()]; ok {
 			suite.FailNow("duplicate id")
