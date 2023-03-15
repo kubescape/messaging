@@ -1,11 +1,11 @@
-package pulsarconnector
+package worker
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/kubescape/pulsar-connector/common/tracer"
-	"github.com/kubescape/pulsar-connector/common/utils"
+	"github.com/kubescape/messaging/pulsar/common/tracer"
+	"github.com/kubescape/messaging/pulsar/common/utils"
 
 	"github.com/apache/pulsar-client-go/pulsar"
 	"go.opentelemetry.io/otel/codes"

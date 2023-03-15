@@ -1,9 +1,9 @@
-package pulsarconnector
+package connector
 
 import (
 	"context"
 
-	"github.com/kubescape/pulsar-connector/common/tracer"
+	"github.com/kubescape/messaging/pulsar/common/tracer"
 
 	"github.com/apache/pulsar-client-go/pulsar"
 )

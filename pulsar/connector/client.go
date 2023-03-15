@@ -1,4 +1,4 @@
-package pulsarconnector
+package connector
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubescape/pulsar-connector/config"
+	"github.com/kubescape/messaging/pulsar/config"
 
 	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/avast/retry-go"

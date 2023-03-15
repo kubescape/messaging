@@ -1,4 +1,4 @@
-package pulsarconnector
+package utils
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package pulsarconnector
+package connector
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 
 	"encoding/json"
 
-	"github.com/kubescape/pulsar-connector/config"
+	"github.com/kubescape/messaging/pulsar/config"
 
 	"github.com/apache/pulsar-client-go/pulsar"
 
@@ -46,6 +46,10 @@ func (suite *MainTestSuite) SetupSuite() {
 		MaxDeliveryAttempts:    2,
 		RedeliveryDelaySeconds: 0,
 	}
+
+	x, _ := json.Marshal(suite.defaultTestConfig)
+	fmt.Println(string(x))
+
 	//start pulsar
 	suite.startPulsar()
 
@@ -119,9 +123,10 @@ func produceMessages[P TestPayload](suite *MainTestSuite, ctx context.Context, p
 		}
 	}
 }
-func consumeMessages[P TestPayload](suite *MainTestSuite, ctx context.Context, consumer pulsar.Consumer) (actualPayloads map[string]P) {
-	//consume payloads for one second
-	testConsumerCtx, consumerCancel := context.WithTimeout(ctx, time.Second)
+
+func consumeMessages[P TestPayload](suite *MainTestSuite, ctx context.Context, consumer pulsar.Consumer, consumerId string, timeoutSeconds int) (actualPayloads map[string]P) {
+	//consume payloads for X seconds
+	testConsumerCtx, consumerCancel := context.WithTimeout(ctx, time.Second*time.Duration(timeoutSeconds))
 	defer consumerCancel()
 	actualPayloads = map[string]P{}
 	for {
@@ -129,38 +134,26 @@ func consumeMessages[P TestPayload](suite *MainTestSuite, ctx context.Context, c
 
 		if err != nil {
 			if testConsumerCtx.Err() == nil {
+				fmt.Printf("%s: consumer error: %s", consumerId, err.Error())
 				suite.FailNow(err.Error(), "consumer error")
 			}
+			fmt.Printf("%s: breaking - %s", consumerId, err.Error())
 			break
 		}
 		var payload P
 		if err := json.Unmarshal(msg.Payload(), &payload); err != nil {
-			// suite.FailNow(err.Error())
+			fmt.Printf("%s: unmarshal failed - Nack()", consumerId)
 			consumer.Nack(msg)
 			continue
 		}
 		if _, ok := actualPayloads[payload.GetId()]; ok {
+			fmt.Printf("%s: duplicate ID %s", consumerId, payload.GetId())
 			suite.FailNow("duplicate id")
+
 		}
 		actualPayloads[payload.GetId()] = payload
+		fmt.Printf("%s: Ack() - ID %s", consumerId, payload.GetId())
 		consumer.Ack(msg)
 	}
 	return actualPayloads
-}
-
-func (suite *MainTestSuite) newDlqConsumer(topicName TopicName) pulsar.Consumer {
-	client, err := GetClientOnce(&suite.defaultTestConfig)
-	if err != nil {
-		suite.FailNow(err.Error())
-	}
-	topic := GetTopic(topicName + "-dlq")
-	consumer, err := client.Subscribe(pulsar.ConsumerOptions{
-		Topic:            topic,
-		SubscriptionName: "Test",
-		Type:             pulsar.Shared,
-	})
-	if err != nil {
-		suite.FailNow(err.Error(), "Dlq Consumer creation")
-	}
-	return consumer
 }

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/kubescape/pulsar-connector/common/utils"
+	"github.com/kubescape/messaging/pulsar/common/utils"
 
 	"github.com/apache/pulsar-client-go/pulsar"
 	"go.opentelemetry.io/otel"

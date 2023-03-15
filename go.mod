@@ -1,11 +1,10 @@
-module github.com/kubescape/pulsar-connector
+module github.com/kubescape/messaging
 
-go 1.19
+go 1.18
 
 require (
 	github.com/apache/pulsar-client-go v0.9.0
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/google/go-cmp v0.5.9
 	github.com/stretchr/testify v1.8.1
 	go.opentelemetry.io/otel v1.13.0
 	go.opentelemetry.io/otel/trace v1.13.0

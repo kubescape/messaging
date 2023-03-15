@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/kubescape/pulsar-connector/common/utils"
+	"github.com/kubescape/messaging/pulsar/common/utils"
 
 	"go.opentelemetry.io/otel/codes"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-const TracerName = "github.com/kubescape/pulsar-connector"
+const TracerName = "github.com/kubescape/messaging"
 
 func LogTrace(c context.Context, msg string) {
 	var fields []zapcore.Field

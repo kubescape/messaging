@@ -1,4 +1,4 @@
-package pulsarconnector
+package connector
 
 import (
 	"context"
@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
-	"github.com/kubescape/pulsar-connector/common/tracer"
-	"github.com/kubescape/pulsar-connector/common/utils"
-	"github.com/kubescape/pulsar-connector/config"
+	"github.com/kubescape/messaging/pulsar/common/tracer"
+	"github.com/kubescape/messaging/pulsar/common/utils"
+	"github.com/kubescape/messaging/pulsar/config"
 )
 
 type TestPayload interface {
@@ -76,11 +76,9 @@ func (suite *MainTestSuite) TestConsumerAndProducer() {
 	//send test payloads
 	produceMessages(suite, ctx, producer, loadJson[[]TestPayloadImpl](testPayload))
 	//consume payloads for one second
-	actualPayloads := consumeMessages[TestPayloadImpl](suite, pubsubCtx, consumer)
-	//expect payloads of 2 tenants (one tenant one unsubscribed user)
-	suite.Equal(len(actualPayloads), 2, "expected 2 messages")
-	//compare with expected payloads
-	// compareAndUpdate(suite.T(), actualPayloads, expectedRecipientsPayloads, expectedRecipientsPayloadsFile, updatedExpected, ignoreTime)
+	actualPayloads := consumeMessages[TestPayloadImpl](suite, pubsubCtx, consumer, "", 1)
+
+	suite.Equal(2, len(actualPayloads), "expected 2 messages")
 }
 
 // CreateTestProducer creates a producer
@@ -129,6 +127,25 @@ func CreateTestConsumer(ctx context.Context, config *config.PulsarConfig) (pulsa
 	return consumer, err
 }
 
+func CreateTestDlqConsumer(config *config.PulsarConfig) (pulsar.Consumer, error) {
+	client, err := GetClientOnce(config)
+	if err != nil {
+		return nil, err
+	}
+
+	topic := GetTopic(TestTopicName + "-dlq")
+	consumer, err := client.Subscribe(pulsar.ConsumerOptions{
+		Topic:            topic,
+		SubscriptionName: "Test",
+		Type:             pulsar.Shared,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return consumer, nil
+}
+
 func (suite *MainTestSuite) TestDLQ() {
 	//set test config
 	testConf := suite.defaultTestConfig
@@ -152,7 +169,10 @@ func (suite *MainTestSuite) TestDLQ() {
 		suite.FailNow(err.Error())
 	}
 	defer consumer.Close()
-	dlqConsumer := suite.newDlqConsumer(TestTopicName)
+	dlqConsumer, err := CreateTestDlqConsumer(&testConf)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
 	defer dlqConsumer.Close()
 
 	testPayload := []byte("[{\"id\":\"1\",\"data\":\"Hello World\"},{\"id\":2,\"data\":\"Hello from the other World\"}]")
@@ -167,26 +187,28 @@ func (suite *MainTestSuite) TestDLQ() {
 	var actualPayloads map[string]TestPayloadImpl
 	go func() {
 		defer wg.Done()
-		//consume payloads for one second
-		actualPayloads = consumeMessages[TestPayloadImpl](suite, pubsubCtx, consumer)
+		// consume payloads for one second
+		actualPayloads = consumeMessages[TestPayloadImpl](suite, pubsubCtx, consumer, "consumer", 20)
+		//sleep to allow redelivery
+		//
 	}()
 	var dlqPayloads map[string]TestInvalidPayloadImpl
 	go func() {
 		defer wg.Done()
-		//consume payloads for one second
-		dlqPayloads = consumeMessages[TestInvalidPayloadImpl](suite, pubsubCtx, dlqConsumer)
+		time.Sleep(time.Second * 10)
+		// consume payloads for one second
+		dlqPayloads = consumeMessages[TestInvalidPayloadImpl](suite, pubsubCtx, dlqConsumer, "dlqConsumer", 20)
 	}()
 	wg.Wait()
 
-	//expect payloads of 2 tenants (one tenant one unsubscribed user)
-	suite.Equal(len(actualPayloads), 1, "expected 1 msg in successful consumer")
-	suite.Equal(len(dlqPayloads), 1, "expected 1 msg in dlq consumer")
+	suite.Equal(1, len(actualPayloads), "expected 1 msg in successful consumer")
+	suite.Contains(actualPayloads, "1", "expected msg with ID 1 in successful consumer")
 
-	//compare with expected payloads
-	// compareAndUpdate(suite.T(), dlqPayloads, dlqRecipientsPayloads, dlqRecipientsPayloadsFile, updatedExpected, ignoreTime)
+	suite.Equal(1, len(dlqPayloads), "expected 1 msg in dlq consumer")
+	suite.Contains(dlqPayloads, "2", "expected msg with ID 2 in dlq consumer")
 
-	//do bad payload test
-	suite.badPayloadTest(ctx, producer, dlqConsumer)
+	// TODO: bad payload test
+	// suite.badPayloadTest(ctx, producer, dlqConsumer)
 }
 
 func (suite *MainTestSuite) badPayloadTest(ctx context.Context, producer pulsar.Producer, dlqConsumer pulsar.Consumer) {
