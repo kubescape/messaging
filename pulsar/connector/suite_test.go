@@ -54,7 +54,7 @@ func (suite *MainTestSuite) SetupSuite() {
 	suite.startPulsar()
 
 	//ensure pulsar connection
-	pulsarClient, err := GetClientOnce(&suite.defaultTestConfig)
+	pulsarClient, err := GetClientOnce(WithConfig(&suite.defaultTestConfig))
 	if err != nil {
 		suite.FailNow("failed to create pulsar client", err.Error())
 	}

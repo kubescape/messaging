@@ -83,7 +83,7 @@ func (suite *MainTestSuite) TestConsumerAndProducer() {
 
 // CreateTestProducer creates a producer
 func CreateTestProducer(ctx context.Context, config *config.PulsarConfig) (pulsar.Producer, error) {
-	client, err := GetClientOnce(config)
+	client, err := GetClientOnce(WithConfig(config))
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func CreateTestProducer(ctx context.Context, config *config.PulsarConfig) (pulsa
 }
 
 func CreateTestConsumer(ctx context.Context, config *config.PulsarConfig) (pulsar.Consumer, error) {
-	client, err := GetClientOnce(config)
+	client, err := GetClientOnce(WithConfig(config))
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +128,7 @@ func CreateTestConsumer(ctx context.Context, config *config.PulsarConfig) (pulsa
 }
 
 func CreateTestDlqConsumer(config *config.PulsarConfig) (pulsar.Consumer, error) {
-	client, err := GetClientOnce(config)
+	client, err := GetClientOnce(WithConfig(config))
 	if err != nil {
 		return nil, err
 	}

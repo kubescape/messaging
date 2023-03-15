@@ -28,25 +28,57 @@ const (
 	namespacesPath       = adminPath + "/namespaces"
 )
 
+type PulsarClientOptions struct {
+	retryAttempts    *int
+	retryMaxDelay    *time.Duration
+	config           *config.PulsarConfig
+	operationTimeout *time.Duration
+}
+
 // GetClientOnce returns a singleton pulsar client
-func GetClientOnce(cfg *config.PulsarConfig) (pulsar.Client, error) {
+func GetClientOnce(options ...func(*PulsarClientOptions)) (pulsar.Client, error) {
+	if client != nil {
+		return client, nil
+	}
+
+	clientOptions := &PulsarClientOptions{}
+	for _, o := range options {
+		o(clientOptions)
+	}
+
+	cfg := clientOptions.config
 	if cfg == nil {
-		return nil, fmt.Errorf("pulsar config is nil")
+		return nil, fmt.Errorf("pulsar config is nil. use WithConfig to set it")
+	}
+	retryAttempts := 5
+	if clientOptions.retryAttempts != nil {
+		retryAttempts = *clientOptions.retryAttempts
+	}
+
+	retryMaxDelay := time.Second
+	if clientOptions.retryMaxDelay != nil {
+		retryMaxDelay = *clientOptions.retryMaxDelay
+	}
+
+	operationTimeout := time.Second * 10
+	if clientOptions.operationTimeout != nil {
+		operationTimeout = *clientOptions.operationTimeout
 	}
 
 	var initErr error
-
 	initOnce.Do(func() {
+
 		client, initErr = pulsar.NewClient(pulsar.ClientOptions{
 			URL:              cfg.URL,
-			OperationTimeout: time.Second * 10,
+			OperationTimeout: operationTimeout,
 		})
+
 		if initErr != nil {
 			return
 		}
 		log.Printf("pulsar client created - testing connection")
 		if initErr = retry.Do(pingPulsar,
-			retry.LastErrorOnly(true), retry.Attempts(5), retry.MaxDelay(time.Second)); initErr != nil {
+			retry.LastErrorOnly(true), retry.Attempts(uint(retryAttempts)), retry.MaxDelay(retryMaxDelay)); initErr != nil {
 			log.Printf("pulsar connection test failed")
 			return
 		}
@@ -75,6 +107,34 @@ func GetClientOnce(cfg *config.PulsarConfig) (pulsar.Client, error) {
 		clientConfig = cfg
 	})
 	return client, initErr
+}
+
+func Ptr[T any](v T) *T {
+	return &v
+}
+
+func WithOperationTimeout(operationTimeout time.Duration) func(*PulsarClientOptions) {
+	return func(o *PulsarClientOptions) {
+		o.operationTimeout = Ptr(operationTimeout)
+	}
+}
+
+func WithConfig(config *config.PulsarConfig) func(*PulsarClientOptions) {
+	return func(o *PulsarClientOptions) {
+		o.config = config
+	}
+}
+
+func WithRetryAttempts(retryAttempts int) func(*PulsarClientOptions) {
+	return func(o *PulsarClientOptions) {
+		o.retryAttempts = Ptr(retryAttempts)
+	}
+}
+
+func WithRetryMaxDelay(maxDelay time.Duration) func(*PulsarClientOptions) {
+	return func(o *PulsarClientOptions) {
+		o.retryMaxDelay = Ptr(maxDelay)
+	}
 }
 
 func pingPulsar() error {
