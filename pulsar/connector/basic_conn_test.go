@@ -94,7 +94,7 @@ func CreateTestProducer(ctx context.Context, config *config.PulsarConfig) (pulsa
 		Interceptors: tracer.NewProducerInterceptors(ctx),
 	})
 
-	if err != nil && IsProducerNameExistsError(testProducerName, err) {
+	if err != nil && utils.IsProducerNameExistsError(testProducerName, err) {
 		//other instance became the producer
 		return nil, nil
 	}
