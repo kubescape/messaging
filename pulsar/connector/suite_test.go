@@ -33,6 +33,7 @@ func TestBasicConnection(t *testing.T) {
 type MainTestSuite struct {
 	suite.Suite
 	defaultTestConfig config.PulsarConfig
+	pulsarClient      pulsar.Client
 	shutdownFunc      func()
 }
 
@@ -53,14 +54,15 @@ func (suite *MainTestSuite) SetupSuite() {
 	//start pulsar
 	suite.startPulsar()
 
+	var err error
 	//ensure pulsar connection
-	pulsarClient, err := GetClientOnce(WithConfig(&suite.defaultTestConfig))
+	suite.pulsarClient, err = GetClientOnce(WithConfig(&suite.defaultTestConfig))
 	if err != nil {
 		suite.FailNow("failed to create pulsar client", err.Error())
 	}
 	suite.shutdownFunc = func() {
 		defer func() {
-			pulsarClient.Close()
+			suite.pulsarClient.Close()
 		}()
 	}
 }
@@ -74,6 +76,41 @@ func (suite *MainTestSuite) TearDownSuite() {
 
 func (suite *MainTestSuite) SetupTest() {
 	// suite.T().Log("setup test")
+}
+
+func (suite *MainTestSuite) TestCreateConsumer() {
+	//create consumer
+	chan1 := make(chan pulsar.ConsumerMessage)
+
+	consumer, err := CreateConsumer(suite.pulsarClient, WithMessageChannel(chan1), WithTopic("test-topic"), WithSubscriptionName("test-subscription"), WithTopics([]string{"test-topic"}))
+	if err != nil {
+		suite.FailNow("failed to create consumer", err.Error())
+	}
+	defer consumer.Close()
+}
+
+func (suite *MainTestSuite) TestCreateProducer() {
+	//create producer
+	producer, err := CreateProducer(suite.pulsarClient, "test-topic")
+	if err != nil {
+		suite.FailNow("failed to create producer", err.Error())
+	}
+	defer producer.Close()
+}
+
+func (suite *MainTestSuite) TestProduceMessage() {
+	//create producer
+	producer, err := CreateProducer(suite.pulsarClient, "test-topic")
+	if err != nil {
+		suite.FailNow("failed to create producer", err.Error())
+	}
+	defer producer.Close()
+
+	//produce message
+	msg := "test message"
+	if err := ProduceMessage(producer, WithMessageToSend(msg), WithContext(context.Background()), WithPulsarClient(suite.pulsarClient)); err != nil {
+		suite.FailNow("failed to produce message", err.Error())
+	}
 }
 
 func (suite *MainTestSuite) startPulsar() {
