@@ -16,14 +16,22 @@ type createConsumerOptions struct {
 	MessageChannel       chan pulsar.ConsumerMessage
 	DefaultBackoffPolicy bool
 	BackoffPolicy        pulsar.NackBackoffPolicy
+	Tenant               string
+	Namespace            string
 }
 
-func (pot *createConsumerOptions) defaults() {
-	if pot.MaxDeliveryAttempts == 0 {
-		pot.MaxDeliveryAttempts = uint32(GetClientConfig().MaxDeliveryAttempts)
+func (opt *createConsumerOptions) defaults() {
+	if opt.MaxDeliveryAttempts == 0 {
+		opt.MaxDeliveryAttempts = uint32(GetClientConfig().MaxDeliveryAttempts)
 	}
-	if pot.RedeliveryDelay == 0 {
-		pot.RedeliveryDelay = time.Duration(GetClientConfig().RedeliveryDelaySeconds)
+	if opt.RedeliveryDelay == 0 {
+		opt.RedeliveryDelay = time.Duration(GetClientConfig().RedeliveryDelaySeconds)
+	}
+	if opt.Tenant == "" {
+		opt.Tenant = GetClientConfig().Tenant
+	}
+	if opt.Namespace == "" {
+		opt.Namespace = GetClientConfig().Namespace
 	}
 }
 
@@ -41,6 +49,13 @@ func (opt *createConsumerOptions) validate() error {
 		return fmt.Errorf("cannot specify both default backoff policy and backoff policy")
 	}
 	return nil
+}
+
+func WithNamespace(tenant, namespace string) CreateConsumerOption {
+	return func(o *createConsumerOptions) {
+		o.Tenant = tenant
+		o.Namespace = namespace
+	}
 }
 
 type CreateConsumerOption func(*createConsumerOptions)
@@ -106,16 +121,16 @@ func CreateSharedConsumer(pulsarClient pulsar.Client, createConsumerOpts ...Crea
 	}
 	var dlq *pulsar.DLQPolicy
 	if opts.MaxDeliveryAttempts != 0 {
-		dlq = NewDlq(opts.Topic, opts.MaxDeliveryAttempts)
+		dlq = NewDlq(opts.Tenant, opts.Namespace, opts.Topic, opts.MaxDeliveryAttempts)
 	}
 	var topic string
 	var topics []string
 	if opts.Topic != "" {
-		topic = GetTopic(opts.Topic)
+		topic = BuildPersistentTopic(opts.Tenant, opts.Namespace, opts.Topic)
 	} else {
 		topics = make([]string, len(opts.Topics))
 		for i, t := range opts.Topics {
-			topics[i] = GetTopic(t)
+			topics[i] = BuildPersistentTopic(opts.Tenant, opts.Namespace, t)
 		}
 	}
 	return pulsarClient.Subscribe(pulsar.ConsumerOptions{

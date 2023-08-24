@@ -7,10 +7,10 @@ import (
 	"github.com/apache/pulsar-client-go/pulsar"
 )
 
-func NewDlq(topic TopicName, maxDeliveryAttempts uint32) *pulsar.DLQPolicy {
+func NewDlq(tenant, namespace string, topic TopicName, maxDeliveryAttempts uint32) *pulsar.DLQPolicy {
 	return &pulsar.DLQPolicy{
 		MaxDeliveries:   maxDeliveryAttempts,
-		DeadLetterTopic: GetTopic(topic + "-dlq"),
+		DeadLetterTopic: BuildPersistentTopic(tenant, namespace, topic+"-dlq"),
 		ProducerOptions: pulsar.ProducerOptions{
 			//TODO: OTL
 			//		Interceptors: tracer.NewProducerInterceptors(ctx),

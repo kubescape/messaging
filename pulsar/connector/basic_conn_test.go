@@ -89,7 +89,7 @@ func CreateTestProducer(ctx context.Context, config *config.PulsarConfig) (pulsa
 	}
 
 	producer, err := client.CreateProducer(pulsar.ProducerOptions{
-		Topic:        GetTopic(TestTopicName),
+		Topic:        BuildPersistentTopic(GetClientConfig().Tenant, GetClientConfig().Namespace, TestTopicName),
 		Name:         testProducerName,
 		Interceptors: tracer.NewProducerInterceptors(ctx),
 	})

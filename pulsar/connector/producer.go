@@ -9,10 +9,54 @@ import (
 	"go.uber.org/zap"
 )
 
-func CreateProducer(pulsarClient pulsar.Client, topic TopicName) (pulsar.Producer, error) {
-	// Get a producer instance
+type createProducerOptions struct {
+	Topic     TopicName
+	Tenant    string
+	Namespace string
+}
+
+func (opt *createProducerOptions) defaults() {
+	if opt.Tenant == "" {
+		opt.Tenant = GetClientConfig().Tenant
+	}
+	if opt.Namespace == "" {
+		opt.Namespace = GetClientConfig().Namespace
+	}
+}
+
+func (opt *createProducerOptions) validate() error {
+	if opt.Topic == "" {
+		return fmt.Errorf("topic must be specified")
+	}
+	return nil
+}
+
+func WithProducerNamespace(tenant, namespace string) CreateProducerOption {
+	return func(o *createProducerOptions) {
+		o.Tenant = tenant
+		o.Namespace = namespace
+	}
+}
+
+func WithProducerTopic(topic TopicName) CreateProducerOption {
+	return func(o *createProducerOptions) {
+		o.Topic = topic
+	}
+}
+
+type CreateProducerOption func(*createProducerOptions)
+
+func CreateProducer(pulsarClient pulsar.Client, createProducerOption ...CreateProducerOption) (pulsar.Producer, error) {
+	opts := &createProducerOptions{}
+	opts.defaults()
+	for _, o := range createProducerOption {
+		o(opts)
+	}
+	if err := opts.validate(); err != nil {
+		return nil, err
+	}
 	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{
-		Topic: GetTopic(topic),
+		Topic: BuildPersistentTopic(opts.Tenant, opts.Namespace, opts.Topic),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("CreateProducer: failed to create producer: %w", err)

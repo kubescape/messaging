@@ -91,7 +91,7 @@ func (suite *MainTestSuite) TestCreateConsumer() {
 
 func (suite *MainTestSuite) TestCreateProducer() {
 	//create producer
-	producer, err := CreateProducer(suite.pulsarClient, "test-topic")
+	producer, err := CreateProducer(suite.pulsarClient, WithProducerTopic("test-topic"))
 	if err != nil {
 		suite.FailNow("failed to create producer", err.Error())
 	}
@@ -100,7 +100,7 @@ func (suite *MainTestSuite) TestCreateProducer() {
 
 func (suite *MainTestSuite) TestProduceMessage() {
 	//create producer
-	producer, err := CreateProducer(suite.pulsarClient, "test-topic")
+	producer, err := CreateProducer(suite.pulsarClient, WithProducerTopic("test-topic"))
 	if err != nil {
 		suite.FailNow("failed to create producer", err.Error())
 	}

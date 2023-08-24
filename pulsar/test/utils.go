@@ -11,7 +11,7 @@ import (
 )
 
 func ProduceToTopic(suite *PulsarTestSuite, topic connector.TopicName, payloads [][]byte) {
-	producer, err := connector.CreateProducer(suite.PulsarClient, topic)
+	producer, err := connector.CreateProducer(suite.PulsarClient, connector.WithProducerTopic(topic))
 	if err != nil {
 		suite.FailNow(err.Error(), "create producer")
 	}
@@ -24,7 +24,7 @@ func ProduceToTopic(suite *PulsarTestSuite, topic connector.TopicName, payloads 
 }
 
 func ProduceObjectsToTopic[P any](suite *PulsarTestSuite, topic connector.TopicName, payloads []P) {
-	producer, err := connector.CreateProducer(suite.PulsarClient, topic)
+	producer, err := connector.CreateProducer(suite.PulsarClient, connector.WithProducerTopic(topic))
 	if err != nil {
 		suite.FailNow(err.Error(), "create producer")
 	}

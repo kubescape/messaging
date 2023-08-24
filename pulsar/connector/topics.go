@@ -6,11 +6,6 @@ import (
 
 type TopicName string
 
-// default is persistent
-func GetTopic(topicName TopicName) string {
-	return BuildPersistentTopic(topicName)
-}
-
 type TopicPersistency string
 
 const (
@@ -19,14 +14,14 @@ const (
 	TopicTypeNonPersistent TopicPersistency = "non-persistent"
 )
 
-func BuildTopic(persistency TopicPersistency, topicName TopicName) string {
-	return fmt.Sprintf("%s://%s/%s/%s", persistency, GetClientConfig().Tenant, GetClientConfig().Namespace, topicName)
+func BuildTopic(persistency TopicPersistency, tenant, namespace string, topicName TopicName) string {
+	return fmt.Sprintf("%s://%s/%s/%s", persistency, tenant, namespace, topicName)
 }
 
-func BuildPersistentTopic(topicName TopicName) string {
-	return BuildTopic(TopicTypePersistent, topicName)
+func BuildPersistentTopic(tenant, namespace string, topicName TopicName) string {
+	return BuildTopic(TopicTypePersistent, tenant, namespace, topicName)
 }
 
-func BuildNonPersistentTopic(topicName TopicName) string {
-	return BuildTopic(TopicTypePersistent, topicName)
+func BuildNonPersistentTopic(tenant, namespace string, topicName TopicName) string {
+	return BuildTopic(TopicTypePersistent, tenant, namespace, topicName)
 }
