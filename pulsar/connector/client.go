@@ -31,6 +31,7 @@ type PulsarClientOptions struct {
 type PulsarClient interface {
 	pulsar.Client
 	GetConfig() config.PulsarConfig
+	Ping() error
 }
 
 type pulsarClient struct {
@@ -40,6 +41,11 @@ type pulsarClient struct {
 
 func (p *pulsarClient) GetConfig() config.PulsarConfig {
 	return p.config
+}
+
+func (p *pulsarClient) Ping() error {
+	_, err := p.TopicPartitions("test")
+	return err
 }
 
 // NewClient creates a new pulsar client
@@ -78,12 +84,13 @@ func NewClient(options ...func(*PulsarClientOptions)) (PulsarClient, error) {
 	if initErr != nil {
 		return nil, fmt.Errorf("failed to create pulsar client: %w", initErr)
 	}
+	pulsarClient := &pulsarClient{
+		Client: client,
+		config: *cfg,
+	}
 
 	log.Printf("pulsar client created - testing connection")
-	if initErr = retry.Do(func() error {
-		_, err := client.TopicPartitions("test")
-		return err
-	},
+	if initErr = retry.Do(pulsarClient.Ping,
 		retry.LastErrorOnly(true), retry.Attempts(uint(retryAttempts)), retry.MaxDelay(retryMaxDelay)); initErr != nil {
 		log.Printf("pulsar connection test failed")
 		return nil, fmt.Errorf("failed to ping pulsar: %w", initErr)
@@ -108,10 +115,6 @@ func NewClient(options ...func(*PulsarClientOptions)) (PulsarClient, error) {
 		if initErr = pulsarAdminRequest(http.MethodPut, namespacePath, nil); initErr != nil {
 			return nil, fmt.Errorf("failed to create namespace: %w", initErr)
 		}
-	}
-	pulsarClient := &pulsarClient{
-		Client: client,
-		config: *cfg,
 	}
 	return pulsarClient, nil
 }
