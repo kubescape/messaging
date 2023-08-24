@@ -1,19 +1,74 @@
 package connector
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/apache/pulsar-client-go/pulsar"
 )
 
 type createConsumerOptions struct {
-	Topic            string
-	Topics           []string
-	SubscriptionName string
-	MessageChannel   chan pulsar.ConsumerMessage
+	Topic                TopicName
+	Topics               []string
+	SubscriptionName     string
+	MaxDeliveryAttempts  uint32
+	RedeliveryDelay      time.Duration
+	MessageChannel       chan pulsar.ConsumerMessage
+	DefaultBackoffPolicy bool
+	BackoffPolicy        pulsar.NackBackoffPolicy
+}
+
+func (pot *createConsumerOptions) defaults() {
+	if pot.MaxDeliveryAttempts == 0 {
+		pot.MaxDeliveryAttempts = uint32(GetClientConfig().MaxDeliveryAttempts)
+	}
+	if pot.RedeliveryDelay == 0 {
+		pot.RedeliveryDelay = time.Duration(GetClientConfig().RedeliveryDelaySeconds)
+	}
+}
+
+func (opt *createConsumerOptions) validate() error {
+	if opt.Topic == "" && len(opt.Topics) == 0 {
+		return fmt.Errorf("topic or topics must be specified")
+	}
+	if opt.SubscriptionName == "" {
+		return fmt.Errorf("subscription name must be specified")
+	}
+	if opt.DefaultBackoffPolicy && opt.BackoffPolicy != nil {
+		return fmt.Errorf("cannot specify both default backoff policy and backoff policy")
+	}
+	return nil
 }
 
 type CreateConsumerOption func(*createConsumerOptions)
 
-func WithTopic(topic string) CreateConsumerOption {
+func WithRedeliveryDelay(redeliveryDelay time.Duration) CreateConsumerOption {
+	return func(o *createConsumerOptions) {
+		o.RedeliveryDelay = redeliveryDelay
+	}
+}
+
+func WithBackoffPolicy(backoffPolicy pulsar.NackBackoffPolicy) CreateConsumerOption {
+	return func(o *createConsumerOptions) {
+		o.BackoffPolicy = backoffPolicy
+	}
+}
+
+func WithDefaultBackoffPolicy() CreateConsumerOption {
+	return func(o *createConsumerOptions) {
+		o.DefaultBackoffPolicy = true
+	}
+}
+
+// maxDeliveryAttempts before sending to DLQ - 0 means no DLQ
+// by default, maxDeliveryAttempts is 5
+func WithDLQ(maxDeliveryAttempts uint32) CreateConsumerOption {
+	return func(o *createConsumerOptions) {
+		o.MaxDeliveryAttempts = maxDeliveryAttempts
+	}
+}
+
+func WithTopic(topic TopicName) CreateConsumerOption {
 	return func(o *createConsumerOptions) {
 		o.Topic = topic
 	}
@@ -37,19 +92,31 @@ func WithMessageChannel(messageChannel chan pulsar.ConsumerMessage) CreateConsum
 	}
 }
 
-func CreateConsumer(pulsarClient pulsar.Client, createConsumerOpts ...CreateConsumerOption) (pulsar.Consumer, error) {
+func CreateSharedConsumer(pulsarClient pulsar.Client, createConsumerOpts ...CreateConsumerOption) (pulsar.Consumer, error) {
 	opts := &createConsumerOptions{}
+	opts.defaults()
 	for _, o := range createConsumerOpts {
 		o(opts)
 	}
+	if err := opts.validate(); err != nil {
+		return nil, err
+	}
+	var dlq *pulsar.DLQPolicy
+	if opts.MaxDeliveryAttempts != 0 {
+		dlq = NewDlq(opts.Topic, opts.MaxDeliveryAttempts)
+	}
+	return pulsarClient.Subscribe(pulsar.ConsumerOptions{
+		Topic:                          GetTopic(opts.Topic),
+		Topics:                         opts.Topics,
+		SubscriptionName:               opts.SubscriptionName,
+		Type:                           pulsar.Shared,
+		MessageChannel:                 opts.MessageChannel,
+		DLQ:                            dlq,
+		EnableDefaultNackBackoffPolicy: opts.DefaultBackoffPolicy,
 
-	consumer, err := pulsarClient.Subscribe(pulsar.ConsumerOptions{
-		Topic:            opts.Topic,
-		Topics:           opts.Topics,
-		SubscriptionName: opts.SubscriptionName,
-		Type:             pulsar.Shared,
-		MessageChannel:   opts.MessageChannel,
+		//	Interceptors:        tracer.NewConsumerInterceptors(ctx),
+		NackRedeliveryDelay: opts.RedeliveryDelay,
+		NackBackoffPolicy:   opts.BackoffPolicy,
 	})
 
-	return consumer, err
 }

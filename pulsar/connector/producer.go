@@ -9,16 +9,14 @@ import (
 	"go.uber.org/zap"
 )
 
-func CreateProducer(pulsarClient pulsar.Client, topic string) (pulsar.Producer, error) {
+func CreateProducer(pulsarClient pulsar.Client, topic TopicName) (pulsar.Producer, error) {
 	// Get a producer instance
 	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{
-		Topic: topic,
+		Topic: GetTopic(topic),
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("CreateProducer: failed to create producer: %w", err)
 	}
-
 	return producer, nil
 }
 

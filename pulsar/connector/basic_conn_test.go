@@ -44,7 +44,7 @@ func (p TestPayloadImplInterface) GetId() string {
 	return fmt.Sprintf("%v", p.Id)
 }
 
-const TestTopicName = "test-topic"
+const TestTopicName TopicName = "test-topic"
 const TestSubscriptionName = "test-consumer"
 const testProducerName = "test-producer"
 
@@ -111,20 +111,14 @@ func CreateTestConsumer(ctx context.Context, config *config.PulsarConfig) (pulsa
 		return nil, err
 	}
 
-	topic := GetTopic(TestTopicName)
-	consumer, err := client.Subscribe(pulsar.ConsumerOptions{
-		Topic:                          topic,
-		SubscriptionName:               TestSubscriptionName,
-		Type:                           pulsar.Shared,
-		DLQ:                            NewDlq(topic, ctx),
-		Interceptors:                   tracer.NewConsumerInterceptors(ctx),
-		NackRedeliveryDelay:            time.Duration(config.RedeliveryDelaySeconds) * time.Second,
-		EnableDefaultNackBackoffPolicy: true,
-	})
-	if consumer != nil && err == nil {
-		utils.SetContextConsumer(ctx, consumer)
-	}
-	return consumer, err
+	return CreateSharedConsumer(client,
+		WithTopic(TestTopicName),
+		WithSubscriptionName(TestSubscriptionName),
+		WithRedeliveryDelay(time.Duration(config.RedeliveryDelaySeconds)*time.Second),
+		WithDLQ(uint32(GetClientConfig().MaxDeliveryAttempts)),
+		WithDefaultBackoffPolicy(),
+	)
+
 }
 
 func CreateTestDlqConsumer(config *config.PulsarConfig) (pulsar.Consumer, error) {
@@ -133,17 +127,12 @@ func CreateTestDlqConsumer(config *config.PulsarConfig) (pulsar.Consumer, error)
 		return nil, err
 	}
 
-	topic := GetTopic(TestTopicName + "-dlq")
-	consumer, err := client.Subscribe(pulsar.ConsumerOptions{
-		Topic:            topic,
-		SubscriptionName: "Test",
-		Type:             pulsar.Shared,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return consumer, nil
+	return CreateSharedConsumer(client,
+		WithTopic(TestTopicName),
+		WithSubscriptionName(TestSubscriptionName+"-dlq"),
+		WithRedeliveryDelay(0),
+		WithDLQ(0),
+	)
 }
 
 func (suite *MainTestSuite) TestDLQ() {

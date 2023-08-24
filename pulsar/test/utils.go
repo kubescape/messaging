@@ -7,20 +7,29 @@ import (
 	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
+	"github.com/kubescape/messaging/pulsar/connector"
 )
 
-func ProduceToTopic(suite *PulsarTestSuite, topic string, payloads [][]byte) {
-	producer, err := suite.PulsarClient.CreateProducer(pulsar.ProducerOptions{
-		Topic: topic,
-	})
+func ProduceToTopic(suite *PulsarTestSuite, topic connector.TopicName, payloads [][]byte) {
+	producer, err := connector.CreateProducer(suite.PulsarClient, topic)
 	if err != nil {
 		suite.FailNow(err.Error(), "create producer")
 	}
+	defer producer.Close()
 	for _, payload := range payloads {
 		if _, err := producer.Send(context.Background(), &pulsar.ProducerMessage{Payload: payload}); err != nil {
 			suite.FailNow(err.Error(), "send payload")
 		}
 	}
+}
+
+func ProduceObjectsToTopic[P any](suite *PulsarTestSuite, topic connector.TopicName, payloads []P) {
+	producer, err := connector.CreateProducer(suite.PulsarClient, topic)
+	if err != nil {
+		suite.FailNow(err.Error(), "create producer")
+	}
+	defer producer.Close()
+	ProduceMessages[P](suite, context.Background(), producer, payloads)
 }
 
 func ProduceMessages[P any](suite *PulsarTestSuite, ctx context.Context, producer pulsar.Producer, payloads []P) {
@@ -36,17 +45,14 @@ func ProduceMessages[P any](suite *PulsarTestSuite, ctx context.Context, produce
 }
 
 // SubscribeToTopic - subscribe to a topic and returns a function that consumes messages from the topic
-func SubscribeToTopic[P any](suite *PulsarTestSuite, topic string, payloads []P, consumerId string) (consumeFunc func() []P) {
-	consumer, err := suite.PulsarClient.Subscribe(pulsar.ConsumerOptions{
-		Topic:            topic,
-		SubscriptionName: consumerId,
-		Type:             pulsar.Shared,
-	})
+func SubscribeToTopic[P any](suite *PulsarTestSuite, topic connector.TopicName, payloads []P, subscription string) (consumeFunc func() []P) {
+	consumer, err := connector.CreateSharedConsumer(suite.PulsarClient, connector.WithTopic(topic), connector.WithSubscriptionName(subscription))
 	if err != nil {
 		suite.FailNow(err.Error(), "subscribe")
 	}
 	return func() []P {
-		return ConsumeMessages[P](suite, context.Background(), consumer, consumerId, 1)
+		defer consumer.Close()
+		return ConsumeMessages[P](suite, context.Background(), consumer, subscription, 1)
 	}
 }
 
