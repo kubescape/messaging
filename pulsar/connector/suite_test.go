@@ -33,7 +33,7 @@ func TestBasicConnection(t *testing.T) {
 type MainTestSuite struct {
 	suite.Suite
 	defaultTestConfig config.PulsarConfig
-	pulsarClient      pulsar.Client
+	pulsarClient      PulsarClient
 	shutdownFunc      func()
 }
 
@@ -56,7 +56,7 @@ func (suite *MainTestSuite) SetupSuite() {
 
 	var err error
 	//ensure pulsar connection
-	suite.pulsarClient, err = GetClientOnce(WithConfig(&suite.defaultTestConfig))
+	suite.pulsarClient, err = NewClient(WithConfig(&suite.defaultTestConfig))
 	if err != nil {
 		suite.FailNow("failed to create pulsar client", err.Error())
 	}

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
+	"github.com/kubescape/messaging/pulsar/config"
 )
 
 type createConsumerOptions struct {
@@ -20,18 +21,18 @@ type createConsumerOptions struct {
 	Namespace            string
 }
 
-func (opt *createConsumerOptions) defaults() {
+func (opt *createConsumerOptions) defaults(config config.PulsarConfig) {
 	if opt.MaxDeliveryAttempts == 0 {
-		opt.MaxDeliveryAttempts = uint32(GetClientConfig().MaxDeliveryAttempts)
+		opt.MaxDeliveryAttempts = uint32(config.MaxDeliveryAttempts)
 	}
 	if opt.RedeliveryDelay == 0 {
-		opt.RedeliveryDelay = time.Duration(GetClientConfig().RedeliveryDelaySeconds)
+		opt.RedeliveryDelay = time.Duration(config.RedeliveryDelaySeconds)
 	}
 	if opt.Tenant == "" {
-		opt.Tenant = GetClientConfig().Tenant
+		opt.Tenant = config.Tenant
 	}
 	if opt.Namespace == "" {
-		opt.Namespace = GetClientConfig().Namespace
+		opt.Namespace = config.Namespace
 	}
 }
 
@@ -110,9 +111,9 @@ func WithMessageChannel(messageChannel chan pulsar.ConsumerMessage) CreateConsum
 	}
 }
 
-func CreateSharedConsumer(pulsarClient pulsar.Client, createConsumerOpts ...CreateConsumerOption) (pulsar.Consumer, error) {
+func CreateSharedConsumer(pulsarClient PulsarClient, createConsumerOpts ...CreateConsumerOption) (pulsar.Consumer, error) {
 	opts := &createConsumerOptions{}
-	opts.defaults()
+	opts.defaults(pulsarClient.GetConfig())
 	for _, o := range createConsumerOpts {
 		o(opts)
 	}

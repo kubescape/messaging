@@ -13,8 +13,6 @@ import (
 	"github.com/kubescape/messaging/pulsar/config"
 	"github.com/kubescape/messaging/pulsar/connector"
 
-	"github.com/apache/pulsar-client-go/pulsar"
-
 	"github.com/stretchr/testify/suite"
 )
 
@@ -28,7 +26,7 @@ const (
 type PulsarTestSuite struct {
 	suite.Suite
 	DefaultTestConfig config.PulsarConfig
-	PulsarClient      pulsar.Client
+	PulsarClient      connector.PulsarClient
 	shutdownFunc      func()
 }
 
@@ -51,7 +49,7 @@ func (suite *PulsarTestSuite) SetupSuite() {
 
 	var err error
 	//ensure pulsar connection
-	suite.PulsarClient, err = connector.GetClientOnce(connector.WithConfig(&suite.DefaultTestConfig))
+	suite.PulsarClient, err = connector.NewClient(connector.WithConfig(&suite.DefaultTestConfig))
 	if err != nil {
 		suite.FailNow("failed to create pulsar client", err.Error())
 	}

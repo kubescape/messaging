@@ -15,12 +15,12 @@ type createProducerOptions struct {
 	Namespace string
 }
 
-func (opt *createProducerOptions) defaults() {
+func (opt *createProducerOptions) defaults(client PulsarClient) {
 	if opt.Tenant == "" {
-		opt.Tenant = GetClientConfig().Tenant
+		opt.Tenant = client.GetConfig().Tenant
 	}
 	if opt.Namespace == "" {
-		opt.Namespace = GetClientConfig().Namespace
+		opt.Namespace = client.GetConfig().Namespace
 	}
 }
 
@@ -46,9 +46,9 @@ func WithProducerTopic(topic TopicName) CreateProducerOption {
 
 type CreateProducerOption func(*createProducerOptions)
 
-func CreateProducer(pulsarClient pulsar.Client, createProducerOption ...CreateProducerOption) (pulsar.Producer, error) {
+func CreateProducer(pulsarClient PulsarClient, createProducerOption ...CreateProducerOption) (pulsar.Producer, error) {
 	opts := &createProducerOptions{}
-	opts.defaults()
+	opts.defaults(pulsarClient)
 	for _, o := range createProducerOption {
 		o(opts)
 	}
@@ -66,7 +66,7 @@ func CreateProducer(pulsarClient pulsar.Client, createProducerOption ...CreatePr
 
 type produceMessageOptions struct {
 	msgToSend    interface{}
-	pulsarClient pulsar.Client
+	pulsarClient PulsarClient
 	ctx          context.Context
 	properties   map[string]string
 }
@@ -85,7 +85,7 @@ func WithMessageToSend(msgToSend interface{}) ProduceMessageOption {
 	}
 }
 
-func WithPulsarClient(pulsarClient pulsar.Client) ProduceMessageOption {
+func WithPulsarClient(pulsarClient PulsarClient) ProduceMessageOption {
 	return func(o *produceMessageOptions) {
 		o.pulsarClient = pulsarClient
 	}
