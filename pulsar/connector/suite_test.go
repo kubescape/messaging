@@ -82,7 +82,7 @@ func (suite *MainTestSuite) TestCreateConsumer() {
 	//create consumer
 	chan1 := make(chan pulsar.ConsumerMessage)
 
-	consumer, err := CreateSharedConsumer(suite.pulsarClient, WithMessageChannel(chan1), WithTopic("test-topic"), WithSubscriptionName("test-subscription"), WithTopics([]string{"test-topic"}))
+	consumer, err := CreateSharedConsumer(suite.pulsarClient, WithMessageChannel(chan1), WithTopic("test-topic"), WithSubscriptionName("test-subscription"))
 	if err != nil {
 		suite.FailNow("failed to create consumer", err.Error())
 	}

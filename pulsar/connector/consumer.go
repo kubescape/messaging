@@ -9,7 +9,7 @@ import (
 
 type createConsumerOptions struct {
 	Topic                TopicName
-	Topics               []string
+	Topics               []TopicName
 	SubscriptionName     string
 	MaxDeliveryAttempts  uint32
 	RedeliveryDelay      time.Duration
@@ -30,6 +30,9 @@ func (pot *createConsumerOptions) defaults() {
 func (opt *createConsumerOptions) validate() error {
 	if opt.Topic == "" && len(opt.Topics) == 0 {
 		return fmt.Errorf("topic or topics must be specified")
+	}
+	if opt.Topic != "" && len(opt.Topics) != 0 {
+		return fmt.Errorf("cannot specify both topic and topics")
 	}
 	if opt.SubscriptionName == "" {
 		return fmt.Errorf("subscription name must be specified")
@@ -74,7 +77,7 @@ func WithTopic(topic TopicName) CreateConsumerOption {
 	}
 }
 
-func WithTopics(topics []string) CreateConsumerOption {
+func WithTopics(topics []TopicName) CreateConsumerOption {
 	return func(o *createConsumerOptions) {
 		o.Topics = topics
 	}
@@ -105,9 +108,19 @@ func CreateSharedConsumer(pulsarClient pulsar.Client, createConsumerOpts ...Crea
 	if opts.MaxDeliveryAttempts != 0 {
 		dlq = NewDlq(opts.Topic, opts.MaxDeliveryAttempts)
 	}
+	var topic string
+	var topics []string
+	if opts.Topic != "" {
+		topic = GetTopic(opts.Topic)
+	} else {
+		topics = make([]string, len(opts.Topics))
+		for i, t := range opts.Topics {
+			topics[i] = GetTopic(t)
+		}
+	}
 	return pulsarClient.Subscribe(pulsar.ConsumerOptions{
-		Topic:                          GetTopic(opts.Topic),
-		Topics:                         opts.Topics,
+		Topic:                          topic,
+		Topics:                         topics,
 		SubscriptionName:               opts.SubscriptionName,
 		Type:                           pulsar.Shared,
 		MessageChannel:                 opts.MessageChannel,
