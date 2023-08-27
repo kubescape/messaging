@@ -79,9 +79,9 @@ func (suite *MainTestSuite) TestConsumerAndProducer() {
 }
 
 // CreateTestProducer creates a producer
-func CreateTestProducer(ctx context.Context, client PulsarClient) (pulsar.Producer, error) {
+func CreateTestProducer(ctx context.Context, client Client) (pulsar.Producer, error) {
 
-	producer, err := CreateProducer(client, WithProducerTopic(TestTopicName))
+	producer, err := client.NewProducer(WithProducerTopic(TestTopicName))
 
 	if err != nil && utils.IsProducerNameExistsError(testProducerName, err) {
 		//other instance became the producer
@@ -94,9 +94,8 @@ func CreateTestProducer(ctx context.Context, client PulsarClient) (pulsar.Produc
 	return producer, err
 }
 
-func CreateTestConsumer(ctx context.Context, client PulsarClient) (pulsar.Consumer, error) {
-	return CreateSharedConsumer(client,
-		WithTopic(TestTopicName),
+func CreateTestConsumer(ctx context.Context, client Client) (pulsar.Consumer, error) {
+	return client.NewConsumer(WithTopic(TestTopicName),
 		WithSubscriptionName(TestSubscriptionName),
 		WithRedeliveryDelay(time.Duration(client.GetConfig().RedeliveryDelaySeconds)*time.Second),
 		WithDLQ(uint32(client.GetConfig().MaxDeliveryAttempts)),
@@ -105,9 +104,8 @@ func CreateTestConsumer(ctx context.Context, client PulsarClient) (pulsar.Consum
 
 }
 
-func CreateTestDlqConsumer(client PulsarClient) (pulsar.Consumer, error) {
-	return CreateSharedConsumer(client,
-		WithTopic(TestTopicName),
+func CreateTestDlqConsumer(client Client) (pulsar.Consumer, error) {
+	return client.NewConsumer(WithTopic(TestTopicName),
 		WithSubscriptionName(TestSubscriptionName+"-dlq"),
 		WithRedeliveryDelay(0),
 		WithDLQ(0),

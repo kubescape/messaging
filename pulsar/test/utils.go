@@ -11,7 +11,7 @@ import (
 )
 
 func ProduceToTopic(suite *PulsarTestSuite, topic connector.TopicName, payloads [][]byte) {
-	producer, err := connector.CreateProducer(suite.PulsarClient, connector.WithProducerTopic(topic))
+	producer, err := suite.Client.NewProducer(connector.WithProducerTopic(topic))
 	if err != nil {
 		suite.FailNow(err.Error(), "create producer")
 	}
@@ -24,7 +24,7 @@ func ProduceToTopic(suite *PulsarTestSuite, topic connector.TopicName, payloads 
 }
 
 func ProduceObjectsToTopic[P any](suite *PulsarTestSuite, topic connector.TopicName, payloads []P) {
-	producer, err := connector.CreateProducer(suite.PulsarClient, connector.WithProducerTopic(topic))
+	producer, err := suite.Client.NewProducer(connector.WithProducerTopic(topic))
 	if err != nil {
 		suite.FailNow(err.Error(), "create producer")
 	}
@@ -46,7 +46,7 @@ func ProduceMessages[P any](suite *PulsarTestSuite, ctx context.Context, produce
 
 // SubscribeToTopic - subscribe to a topic and returns a function that consumes messages from the topic
 func SubscribeToTopic[P any](suite *PulsarTestSuite, topic connector.TopicName, payloads []P, subscription string) (consumeFunc func() []P) {
-	consumer, err := connector.CreateSharedConsumer(suite.PulsarClient, connector.WithTopic(topic), connector.WithSubscriptionName(subscription))
+	consumer, err := suite.Client.NewConsumer(connector.WithTopic(topic), connector.WithSubscriptionName(subscription))
 	if err != nil {
 		suite.FailNow(err.Error(), "subscribe")
 	}

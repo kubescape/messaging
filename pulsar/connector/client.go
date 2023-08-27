@@ -28,10 +28,11 @@ type PulsarClientOptions struct {
 	operationTimeout *time.Duration
 }
 
-type PulsarClient interface {
+type Client interface {
 	pulsar.Client
 	GetConfig() config.PulsarConfig
-	Ping() error
+	NewProducer(createProducerOption ...CreateProducerOption) (Producer, error)
+	NewConsumer(createConsumerOpts ...CreateConsumerOption) (Consumer, error)
 }
 
 type pulsarClient struct {
@@ -43,13 +44,21 @@ func (p *pulsarClient) GetConfig() config.PulsarConfig {
 	return p.config
 }
 
-func (p *pulsarClient) Ping() error {
+func (p *pulsarClient) NewProducer(createProducerOption ...CreateProducerOption) (Producer, error) {
+	return newProducer(p, createProducerOption...)
+}
+
+func (p *pulsarClient) NewConsumer(createConsumerOpts ...CreateConsumerOption) (Consumer, error) {
+	return newSharedConsumer(p, createConsumerOpts...)
+}
+
+func (p *pulsarClient) ping() error {
 	_, err := p.TopicPartitions("test")
 	return err
 }
 
 // NewClient creates a new pulsar client
-func NewClient(options ...func(*PulsarClientOptions)) (PulsarClient, error) {
+func NewClient(options ...func(*PulsarClientOptions)) (Client, error) {
 	clientOptions := &PulsarClientOptions{}
 	for _, o := range options {
 		o(clientOptions)
@@ -90,7 +99,7 @@ func NewClient(options ...func(*PulsarClientOptions)) (PulsarClient, error) {
 	}
 
 	log.Printf("pulsar client created - testing connection")
-	if initErr = retry.Do(pulsarClient.Ping,
+	if initErr = retry.Do(pulsarClient.ping,
 		retry.LastErrorOnly(true), retry.Attempts(uint(retryAttempts)), retry.MaxDelay(retryMaxDelay)); initErr != nil {
 		log.Printf("pulsar connection test failed")
 		return nil, fmt.Errorf("failed to ping pulsar: %w", initErr)

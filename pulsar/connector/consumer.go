@@ -8,6 +8,15 @@ import (
 	"github.com/kubescape/messaging/pulsar/config"
 )
 
+type Consumer interface {
+	pulsar.Consumer
+}
+
+type consumer struct {
+	pulsar.Consumer
+	//TODO override Receive Ack Nack for OTL
+}
+
 type createConsumerOptions struct {
 	Topic                TopicName
 	Topics               []TopicName
@@ -111,7 +120,7 @@ func WithMessageChannel(messageChannel chan pulsar.ConsumerMessage) CreateConsum
 	}
 }
 
-func CreateSharedConsumer(pulsarClient PulsarClient, createConsumerOpts ...CreateConsumerOption) (pulsar.Consumer, error) {
+func newSharedConsumer(pulsarClient Client, createConsumerOpts ...CreateConsumerOption) (Consumer, error) {
 	opts := &createConsumerOptions{}
 	opts.defaults(pulsarClient.GetConfig())
 	for _, o := range createConsumerOpts {
@@ -134,7 +143,7 @@ func CreateSharedConsumer(pulsarClient PulsarClient, createConsumerOpts ...Creat
 			topics[i] = BuildPersistentTopic(opts.Tenant, opts.Namespace, t)
 		}
 	}
-	return pulsarClient.Subscribe(pulsar.ConsumerOptions{
+	pulsarConsumer, err := pulsarClient.Subscribe(pulsar.ConsumerOptions{
 		Topic:                          topic,
 		Topics:                         topics,
 		SubscriptionName:               opts.SubscriptionName,
@@ -147,5 +156,9 @@ func CreateSharedConsumer(pulsarClient PulsarClient, createConsumerOpts ...Creat
 		NackRedeliveryDelay: opts.RedeliveryDelay,
 		NackBackoffPolicy:   opts.BackoffPolicy,
 	})
+	if err != nil {
+		return nil, err
+	}
+	return consumer{pulsarConsumer}, nil
 
 }

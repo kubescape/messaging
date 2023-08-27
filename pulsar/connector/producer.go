@@ -9,13 +9,22 @@ import (
 	"go.uber.org/zap"
 )
 
+type Producer interface {
+	pulsar.Producer
+}
+
+type producer struct {
+	pulsar.Producer
+	//TODO override Send for OTL
+}
+
 type createProducerOptions struct {
 	Topic     TopicName
 	Tenant    string
 	Namespace string
 }
 
-func (opt *createProducerOptions) defaults(client PulsarClient) {
+func (opt *createProducerOptions) defaults(client Client) {
 	if opt.Tenant == "" {
 		opt.Tenant = client.GetConfig().Tenant
 	}
@@ -46,7 +55,7 @@ func WithProducerTopic(topic TopicName) CreateProducerOption {
 
 type CreateProducerOption func(*createProducerOptions)
 
-func CreateProducer(pulsarClient PulsarClient, createProducerOption ...CreateProducerOption) (pulsar.Producer, error) {
+func newProducer(pulsarClient Client, createProducerOption ...CreateProducerOption) (Producer, error) {
 	opts := &createProducerOptions{}
 	opts.defaults(pulsarClient)
 	for _, o := range createProducerOption {
@@ -55,18 +64,19 @@ func CreateProducer(pulsarClient PulsarClient, createProducerOption ...CreatePro
 	if err := opts.validate(); err != nil {
 		return nil, err
 	}
-	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{
+	p, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{
 		Topic: BuildPersistentTopic(opts.Tenant, opts.Namespace, opts.Topic),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("CreateProducer: failed to create producer: %w", err)
 	}
-	return producer, nil
+	return producer{Producer: p}, nil
+
 }
 
 type produceMessageOptions struct {
 	msgToSend    interface{}
-	pulsarClient PulsarClient
+	pulsarClient Client
 	ctx          context.Context
 	properties   map[string]string
 }
@@ -85,7 +95,7 @@ func WithMessageToSend(msgToSend interface{}) ProduceMessageOption {
 	}
 }
 
-func WithPulsarClient(pulsarClient PulsarClient) ProduceMessageOption {
+func WithPulsarClient(pulsarClient Client) ProduceMessageOption {
 	return func(o *produceMessageOptions) {
 		o.pulsarClient = pulsarClient
 	}

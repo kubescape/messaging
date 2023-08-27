@@ -26,7 +26,7 @@ const (
 type PulsarTestSuite struct {
 	suite.Suite
 	DefaultTestConfig config.PulsarConfig
-	PulsarClient      connector.PulsarClient
+	Client            connector.Client
 	shutdownFunc      func()
 }
 
@@ -49,13 +49,13 @@ func (suite *PulsarTestSuite) SetupSuite() {
 
 	var err error
 	//ensure pulsar connection
-	suite.PulsarClient, err = connector.NewClient(connector.WithConfig(&suite.DefaultTestConfig))
+	suite.Client, err = connector.NewClient(connector.WithConfig(&suite.DefaultTestConfig))
 	if err != nil {
 		suite.FailNow("failed to create pulsar client", err.Error())
 	}
 	suite.shutdownFunc = func() {
 		defer func() {
-			suite.PulsarClient.Close()
+			suite.Client.Close()
 		}()
 	}
 }
