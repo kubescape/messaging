@@ -23,10 +23,9 @@ func CreateProducer(pulsarClient pulsar.Client, topic string) (pulsar.Producer, 
 }
 
 type produceMessageOptions struct {
-	msgToSend    interface{}
-	pulsarClient pulsar.Client
-	ctx          context.Context
-	properties   map[string]string
+	msgToSend  interface{}
+	ctx        context.Context
+	properties map[string]string
 }
 
 type ProduceMessageOption func(*produceMessageOptions)
@@ -40,12 +39,6 @@ func WithContext(ctx context.Context) ProduceMessageOption {
 func WithMessageToSend(msgToSend interface{}) ProduceMessageOption {
 	return func(o *produceMessageOptions) {
 		o.msgToSend = msgToSend
-	}
-}
-
-func WithPulsarClient(pulsarClient pulsar.Client) ProduceMessageOption {
-	return func(o *produceMessageOptions) {
-		o.pulsarClient = pulsarClient
 	}
 }
 
