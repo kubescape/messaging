@@ -9,23 +9,76 @@ import (
 	"go.uber.org/zap"
 )
 
-func CreateProducer(pulsarClient pulsar.Client, topic string) (pulsar.Producer, error) {
-	// Get a producer instance
-	producer, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{
-		Topic: topic,
-	})
+type Producer interface {
+	pulsar.Producer
+}
 
+type producer struct {
+	pulsar.Producer
+	//TODO override Send for OTL
+}
+
+type createProducerOptions struct {
+	Topic     TopicName
+	Tenant    string
+	Namespace string
+}
+
+func (opt *createProducerOptions) defaults(client Client) {
+	if opt.Tenant == "" {
+		opt.Tenant = client.GetConfig().Tenant
+	}
+	if opt.Namespace == "" {
+		opt.Namespace = client.GetConfig().Namespace
+	}
+}
+
+func (opt *createProducerOptions) validate() error {
+	if opt.Topic == "" {
+		return fmt.Errorf("topic must be specified")
+	}
+	return nil
+}
+
+func WithProducerNamespace(tenant, namespace string) CreateProducerOption {
+	return func(o *createProducerOptions) {
+		o.Tenant = tenant
+		o.Namespace = namespace
+	}
+}
+
+func WithProducerTopic(topic TopicName) CreateProducerOption {
+	return func(o *createProducerOptions) {
+		o.Topic = topic
+	}
+}
+
+type CreateProducerOption func(*createProducerOptions)
+
+func newProducer(pulsarClient Client, createProducerOption ...CreateProducerOption) (Producer, error) {
+	opts := &createProducerOptions{}
+	opts.defaults(pulsarClient)
+	for _, o := range createProducerOption {
+		o(opts)
+	}
+	if err := opts.validate(); err != nil {
+		return nil, err
+	}
+	p, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{
+		Topic: BuildPersistentTopic(opts.Tenant, opts.Namespace, opts.Topic),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("CreateProducer: failed to create producer: %w", err)
 	}
+	return producer{Producer: p}, nil
 
-	return producer, nil
 }
 
 type produceMessageOptions struct {
-	msgToSend  interface{}
-	ctx        context.Context
-	properties map[string]string
+	msgToSend    interface{}
+	pulsarClient Client
+	ctx          context.Context
+	properties   map[string]string
 }
 
 type ProduceMessageOption func(*produceMessageOptions)
@@ -39,6 +92,12 @@ func WithContext(ctx context.Context) ProduceMessageOption {
 func WithMessageToSend(msgToSend interface{}) ProduceMessageOption {
 	return func(o *produceMessageOptions) {
 		o.msgToSend = msgToSend
+	}
+}
+
+func WithPulsarClient(pulsarClient Client) ProduceMessageOption {
+	return func(o *produceMessageOptions) {
+		o.pulsarClient = pulsarClient
 	}
 }
 

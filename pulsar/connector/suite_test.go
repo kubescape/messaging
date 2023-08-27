@@ -33,7 +33,7 @@ func TestBasicConnection(t *testing.T) {
 type MainTestSuite struct {
 	suite.Suite
 	defaultTestConfig config.PulsarConfig
-	pulsarClient      pulsar.Client
+	pulsarClient      Client
 	shutdownFunc      func()
 }
 
@@ -56,7 +56,7 @@ func (suite *MainTestSuite) SetupSuite() {
 
 	var err error
 	//ensure pulsar connection
-	suite.pulsarClient, err = GetClientOnce(WithConfig(&suite.defaultTestConfig))
+	suite.pulsarClient, err = NewClient(WithConfig(&suite.defaultTestConfig))
 	if err != nil {
 		suite.FailNow("failed to create pulsar client", err.Error())
 	}
@@ -82,7 +82,7 @@ func (suite *MainTestSuite) TestCreateConsumer() {
 	//create consumer
 	chan1 := make(chan pulsar.ConsumerMessage)
 
-	consumer, err := CreateConsumer(suite.pulsarClient, WithMessageChannel(chan1), WithTopic("test-topic"), WithSubscriptionName("test-subscription"), WithTopics([]string{"test-topic"}))
+	consumer, err := suite.pulsarClient.NewConsumer(WithMessageChannel(chan1), WithTopic("test-topic"), WithSubscriptionName("test-subscription"))
 	if err != nil {
 		suite.FailNow("failed to create consumer", err.Error())
 	}
@@ -91,7 +91,7 @@ func (suite *MainTestSuite) TestCreateConsumer() {
 
 func (suite *MainTestSuite) TestCreateProducer() {
 	//create producer
-	producer, err := CreateProducer(suite.pulsarClient, "test-topic")
+	producer, err := suite.pulsarClient.NewProducer(WithProducerTopic("test-topic"))
 	if err != nil {
 		suite.FailNow("failed to create producer", err.Error())
 	}
@@ -100,7 +100,7 @@ func (suite *MainTestSuite) TestCreateProducer() {
 
 func (suite *MainTestSuite) TestProduceMessage() {
 	//create producer
-	producer, err := CreateProducer(suite.pulsarClient, "test-topic")
+	producer, err := suite.pulsarClient.NewProducer(WithProducerTopic("test-topic"))
 	if err != nil {
 		suite.FailNow("failed to create producer", err.Error())
 	}

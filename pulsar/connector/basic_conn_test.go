@@ -8,9 +8,7 @@ import (
 	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
-	"github.com/kubescape/messaging/pulsar/common/tracer"
 	"github.com/kubescape/messaging/pulsar/common/utils"
-	"github.com/kubescape/messaging/pulsar/config"
 )
 
 type TestPayload interface {
@@ -44,18 +42,17 @@ func (p TestPayloadImplInterface) GetId() string {
 	return fmt.Sprintf("%v", p.Id)
 }
 
-const TestTopicName = "test-topic"
+const TestTopicName TopicName = "test-topic"
 const TestSubscriptionName = "test-consumer"
 const testProducerName = "test-producer"
 
 func (suite *MainTestSuite) TestConsumerAndProducer() {
-	testConf := suite.defaultTestConfig
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	//create producer to input test payloads
 	pubsubCtx := utils.NewContextWithValues(ctx, "testConsumer")
-	producer, err := CreateTestProducer(pubsubCtx, &testConf)
+	producer, err := CreateTestProducer(pubsubCtx, suite.pulsarClient)
 	if err != nil {
 		suite.FailNow(err.Error(), "create producer")
 	}
@@ -65,7 +62,7 @@ func (suite *MainTestSuite) TestConsumerAndProducer() {
 	defer producer.Close()
 
 	//create consumer to get actual payloads
-	consumer, err := CreateTestConsumer(pubsubCtx, &testConf)
+	consumer, err := CreateTestConsumer(pubsubCtx, suite.pulsarClient)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
@@ -82,17 +79,9 @@ func (suite *MainTestSuite) TestConsumerAndProducer() {
 }
 
 // CreateTestProducer creates a producer
-func CreateTestProducer(ctx context.Context, config *config.PulsarConfig) (pulsar.Producer, error) {
-	client, err := GetClientOnce(WithConfig(config))
-	if err != nil {
-		return nil, err
-	}
+func CreateTestProducer(ctx context.Context, client Client) (pulsar.Producer, error) {
 
-	producer, err := client.CreateProducer(pulsar.ProducerOptions{
-		Topic:        GetTopic(TestTopicName),
-		Name:         testProducerName,
-		Interceptors: tracer.NewProducerInterceptors(ctx),
-	})
+	producer, err := client.NewProducer(WithProducerTopic(TestTopicName))
 
 	if err != nil && utils.IsProducerNameExistsError(testProducerName, err) {
 		//other instance became the producer
@@ -105,57 +94,32 @@ func CreateTestProducer(ctx context.Context, config *config.PulsarConfig) (pulsa
 	return producer, err
 }
 
-func CreateTestConsumer(ctx context.Context, config *config.PulsarConfig) (pulsar.Consumer, error) {
-	client, err := GetClientOnce(WithConfig(config))
-	if err != nil {
-		return nil, err
-	}
+func CreateTestConsumer(ctx context.Context, client Client) (pulsar.Consumer, error) {
+	return client.NewConsumer(WithTopic(TestTopicName),
+		WithSubscriptionName(TestSubscriptionName),
+		WithRedeliveryDelay(time.Duration(client.GetConfig().RedeliveryDelaySeconds)*time.Second),
+		WithDLQ(uint32(client.GetConfig().MaxDeliveryAttempts)),
+		WithDefaultBackoffPolicy(),
+	)
 
-	topic := GetTopic(TestTopicName)
-	consumer, err := client.Subscribe(pulsar.ConsumerOptions{
-		Topic:                          topic,
-		SubscriptionName:               TestSubscriptionName,
-		Type:                           pulsar.Shared,
-		DLQ:                            NewDlq(topic, ctx),
-		Interceptors:                   tracer.NewConsumerInterceptors(ctx),
-		NackRedeliveryDelay:            time.Duration(config.RedeliveryDelaySeconds) * time.Second,
-		EnableDefaultNackBackoffPolicy: true,
-	})
-	if consumer != nil && err == nil {
-		utils.SetContextConsumer(ctx, consumer)
-	}
-	return consumer, err
 }
 
-func CreateTestDlqConsumer(config *config.PulsarConfig) (pulsar.Consumer, error) {
-	client, err := GetClientOnce(WithConfig(config))
-	if err != nil {
-		return nil, err
-	}
-
-	topic := GetTopic(TestTopicName + "-dlq")
-	consumer, err := client.Subscribe(pulsar.ConsumerOptions{
-		Topic:            topic,
-		SubscriptionName: "Test",
-		Type:             pulsar.Shared,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return consumer, nil
+func CreateTestDlqConsumer(client Client) (pulsar.Consumer, error) {
+	return client.NewConsumer(WithTopic(TestTopicName),
+		WithSubscriptionName(TestSubscriptionName+"-dlq"),
+		WithRedeliveryDelay(0),
+		WithDLQ(0),
+	)
 }
 
 func (suite *MainTestSuite) TestDLQ() {
-	//set test config
-	testConf := suite.defaultTestConfig
 	//start tenant check
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	//create producer to input test payloads
 	pubsubCtx := utils.NewContextWithValues(ctx, "testConsumer")
-	producer, err := CreateTestProducer(pubsubCtx, &testConf)
+	producer, err := CreateTestProducer(pubsubCtx, suite.pulsarClient)
 	if err != nil {
 		suite.FailNow(err.Error(), "create producer")
 	}
@@ -164,12 +128,12 @@ func (suite *MainTestSuite) TestDLQ() {
 	}
 	defer producer.Close()
 	//create consumer to get actual payloads
-	consumer, err := CreateTestConsumer(pubsubCtx, &testConf)
+	consumer, err := CreateTestConsumer(pubsubCtx, suite.pulsarClient)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
 	defer consumer.Close()
-	dlqConsumer, err := CreateTestDlqConsumer(&testConf)
+	dlqConsumer, err := CreateTestDlqConsumer(suite.pulsarClient)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
