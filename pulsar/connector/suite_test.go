@@ -108,7 +108,7 @@ func (suite *MainTestSuite) TestProduceMessage() {
 
 	//produce message
 	msg := "test message"
-	if err := ProduceMessage(producer, WithMessageToSend(msg), WithContext(context.Background()), WithPulsarClient(suite.pulsarClient)); err != nil {
+	if err := ProduceMessage(producer, WithMessageToSend(msg), WithContext(context.Background())); err != nil {
 		suite.FailNow("failed to produce message", err.Error())
 	}
 }
