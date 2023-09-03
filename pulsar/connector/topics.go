@@ -23,5 +23,5 @@ func BuildPersistentTopic(tenant, namespace string, topicName TopicName) string 
 }
 
 func BuildNonPersistentTopic(tenant, namespace string, topicName TopicName) string {
-	return BuildTopic(TopicTypePersistent, tenant, namespace, topicName)
+	return BuildTopic(TopicTypeNonPersistent, tenant, namespace, topicName)
 }
