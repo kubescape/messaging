@@ -18,4 +18,5 @@ const (
 const (
 	MsgPropAction            = "action"
 	MsgPropActionValueUpdate = "update"
+	NsgPropActionValueDelete = "delete"
 )
