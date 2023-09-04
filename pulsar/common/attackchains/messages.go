@@ -21,6 +21,11 @@ type AttackChainScanStatus struct {
 	ProcessingStatus string `json:"processingStatus,omitempty" bson:"processingStatus,omitempty"` // "processing"/ "done"
 }
 
+type AttackChainDelete struct {
+	ClusterName  string `json:"clusterName,omitempty" bson:"clusterName,omitempty"`
+	CustomerGUID string `json:"customerGUID,omitempty" bson:"customerGUID,omitempty"`
+}
+
 func (acps *AttackChainScanStatus) GetCustomerGUID() string {
 	return acps.CustomerGUID
 }
