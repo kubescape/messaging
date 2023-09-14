@@ -94,8 +94,8 @@ func (suite *PulsarTestSuite) checkPulsarIsAlive() bool {
 func (suite *PulsarTestSuite) TearDownSuite() {
 	suite.T().Log("tear down suite")
 	suite.shutdownFunc()
-	killPortProcess(suite.AppPortStart)
-	killPortProcess(suite.AdminPortStart)
+	suite.Assert().NoError(killPortProcess(suite.AppPortStart))
+	suite.Assert().NoError(killPortProcess(suite.AdminPortStart))
 }
 
 func (suite *PulsarTestSuite) SetupTest() {
