@@ -98,6 +98,36 @@ func (suite *MainTestSuite) TestCreateProducer() {
 	defer producer.Close()
 }
 
+func (suite *MainTestSuite) TestCreateProducerFullTopic() {
+	//create producer
+	producer, err := suite.pulsarClient.NewProducer(WithProducerFullTopic("persistent://test-t/test-ns/test-topic"))
+	if err != nil {
+		suite.FailNow("failed to create producer", err.Error())
+	}
+	defer producer.Close()
+}
+
+func (suite *MainTestSuite) TestCreateProducerFullTopicNonPersistent() {
+	//create producer
+	BuildNonPersistentTopic("test-t", "test-ns", "test-topic")
+	producer, err := suite.pulsarClient.NewProducer(WithProducerFullTopic("non-persistent://test-t/test-ns/test-topic"))
+	if err != nil {
+		suite.FailNow("failed to create producer", err.Error())
+	}
+	defer producer.Close()
+}
+
+func (suite *MainTestSuite) TestCreateProducerFullTopicInvalid() {
+	//create producer
+	producer, err := suite.pulsarClient.NewProducer(WithProducerFullTopic("est-t/test-ns/test-topic"))
+	if err == nil {
+		suite.FailNow("created invalid topic producer")
+	}
+	if producer != nil {
+		defer producer.Close()
+	}
+}
+
 func (suite *MainTestSuite) TestProduceMessage() {
 	//create producer
 	producer, err := suite.pulsarClient.NewProducer(WithProducerTopic("test-topic"))

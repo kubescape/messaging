@@ -20,6 +20,7 @@ type producer struct {
 
 type createProducerOptions struct {
 	Topic     TopicName
+	FullTopic string
 	Tenant    string
 	Namespace string
 }
@@ -34,8 +35,11 @@ func (opt *createProducerOptions) defaults(client Client) {
 }
 
 func (opt *createProducerOptions) validate() error {
-	if opt.Topic == "" {
+	if opt.Topic == "" && opt.FullTopic == "" {
 		return fmt.Errorf("topic must be specified")
+	}
+	if opt.Topic != "" && opt.FullTopic != "" {
+		return fmt.Errorf("only one of topic or fullTopic must be specified")
 	}
 	return nil
 }
@@ -53,6 +57,12 @@ func WithProducerTopic(topic TopicName) CreateProducerOption {
 	}
 }
 
+func WithProducerFullTopic(topic TopicName) CreateProducerOption {
+	return func(o *createProducerOptions) {
+		o.FullTopic = string(topic)
+	}
+}
+
 type CreateProducerOption func(*createProducerOptions)
 
 func newProducer(pulsarClient Client, createProducerOption ...CreateProducerOption) (Producer, error) {
@@ -64,8 +74,11 @@ func newProducer(pulsarClient Client, createProducerOption ...CreateProducerOpti
 	if err := opts.validate(); err != nil {
 		return nil, err
 	}
+	if opts.FullTopic == "" {
+		opts.FullTopic = BuildPersistentTopic(opts.Tenant, opts.Namespace, opts.Topic)
+	}
 	p, err := pulsarClient.CreateProducer(pulsar.ProducerOptions{
-		Topic: BuildPersistentTopic(opts.Tenant, opts.Namespace, opts.Topic),
+		Topic: opts.FullTopic,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("CreateProducer: failed to create producer: %w", err)
