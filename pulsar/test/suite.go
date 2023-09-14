@@ -94,6 +94,8 @@ func (suite *PulsarTestSuite) checkPulsarIsAlive() bool {
 func (suite *PulsarTestSuite) TearDownSuite() {
 	suite.T().Log("tear down suite")
 	suite.shutdownFunc()
+	killPortProcess(suite.AppPortStart)
+	killPortProcess(suite.AdminPortStart)
 }
 
 func (suite *PulsarTestSuite) SetupTest() {
@@ -133,13 +135,15 @@ func (suite *PulsarTestSuite) startPulsar(contName string) {
 		suite.FailNow("failed to find free port", err.Error())
 	}
 	suite.DefaultTestConfig.URL = fmt.Sprintf("pulsar://localhost:%d", pulsarAppPort)
+	suite.AppPortStart = pulsarAppPort
 	pulsarAdminPort, err := findFreePort(suite.AdminPortStart, suite.AdminPortStart+100)
 	if err != nil {
 		suite.FailNow("failed to find free port for pulsar admin", err.Error())
 	}
 	suite.DefaultTestConfig.AdminUrl = fmt.Sprintf("http://localhost:%d", pulsarAdminPort)
-	formattedScript := fmt.Sprintf(startPulsarScript, pulsarAppPort, pulsarAdminPort, contName)
+	suite.AdminPortStart = pulsarAdminPort
 
+	formattedScript := fmt.Sprintf(startPulsarScript, pulsarAppPort, pulsarAdminPort, contName)
 	out, err := exec.Command("/bin/sh", "-c", formattedScript).Output()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
