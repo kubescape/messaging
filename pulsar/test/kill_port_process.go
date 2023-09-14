@@ -3,45 +3,39 @@ package test
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
+	"syscall"
+
+	"github.com/cakturk/go-netstat/netstat"
 )
 
-func killPortProcess(targetPort int) {
-	procDir := "/proc"
-	targetProcess := "containers-rootlessport"
-
-	files, err := os.ReadDir(procDir)
+func killPortProcess(targetPort int) error {
+	socks6, err := netstat.TCP6Socks(netstat.NoopFilter)
 	if err != nil {
-		fmt.Println("Error reading /proc directory:", err)
-		return
+		return err
 	}
-
-	for _, file := range files {
-		if !file.IsDir() {
-			continue
-		}
-
-		pid := file.Name()
-		cmdlinePath := filepath.Join(procDir, pid, "cmdline")
-		cmdline, err := os.ReadFile(cmdlinePath)
-		if err != nil {
-			continue
-		}
-
-		if strings.Contains(string(cmdline), targetProcess) {
-			netPath := filepath.Join(procDir, pid, "net", "tcp")
-			netData, err := os.ReadFile(netPath)
-			if err != nil {
+	socks, err := netstat.TCPSocks(netstat.NoopFilter)
+	if err != nil {
+		return err
+	}
+	for _, sock := range append(socks6, socks...) {
+		if sock.LocalAddr.Port == uint16(targetPort) {
+			if sock.Process == nil {
 				continue
 			}
-
-			if strings.Contains(string(netData), fmt.Sprintf(":%04X", targetPort)) {
-				fmt.Printf("PID of '%s' listening on port %d: %s\n", targetProcess, targetPort, pid)
-				return
+			pid := sock.Process.Pid
+			process, err := os.FindProcess(pid)
+			if err != nil {
+				return err
 			}
+			fmt.Println("Killing process of port", pid, targetPort)
+
+			// Send a SIGTERM signal to the process
+			err = process.Signal(syscall.SIGTERM)
+			if err != nil {
+				return err
+			}
+			return nil
 		}
 	}
-
-	fmt.Printf("No process named '%s' found listening on port %d.\n", targetProcess, targetPort)
+	return nil
 }

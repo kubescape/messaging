@@ -47,7 +47,7 @@ func (suite *PulsarTestSuite) SetupSuite() {
 		RedeliveryDelaySeconds: 0,
 	}
 
-	randomContainerName := fmt.Sprintf("pulsar-test-%d", time.Now().UnixNano())
+	randomContainerName := fmt.Sprintf("pulsar-test-%d-%d", suite.AdminPortStart, time.Now().UnixNano())
 	if suite.AppPortStart == 0 {
 		suite.AppPortStart = 6650
 	}
@@ -78,6 +78,7 @@ func (suite *PulsarTestSuite) SetupSuite() {
 }
 func (suite *PulsarTestSuite) checkPulsarIsAlive() bool {
 	kaURL := fmt.Sprintf(pulsarKAURL, suite.DefaultTestConfig.AdminUrl)
+	fmt.Println("pulsar admin", kaURL)
 	req, err := http.NewRequest(http.MethodGet, kaURL, nil)
 	if err != nil {
 		suite.FailNow("failed to create request", err.Error())
@@ -94,8 +95,8 @@ func (suite *PulsarTestSuite) checkPulsarIsAlive() bool {
 func (suite *PulsarTestSuite) TearDownSuite() {
 	suite.T().Log("tear down suite")
 	suite.shutdownFunc()
-	killPortProcess(suite.AppPortStart)
-	killPortProcess(suite.AdminPortStart)
+	suite.Assert().NoError(killPortProcess(suite.AppPortStart))
+	suite.Assert().NoError(killPortProcess(suite.AdminPortStart))
 }
 
 func (suite *PulsarTestSuite) SetupTest() {
@@ -144,7 +145,7 @@ func (suite *PulsarTestSuite) startPulsar(contName string) {
 	suite.AdminPortStart = pulsarAdminPort
 
 	formattedScript := fmt.Sprintf(startPulsarScript, pulsarAppPort, pulsarAdminPort, contName)
-	out, err := exec.Command("/bin/sh", "-c", formattedScript).Output()
+	out, err := exec.Command("/bin/sh", "-c", formattedScript).CombinedOutput()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			suite.FailNow("failed to start pulsar", err.Error(), string(exitErr.Stderr), string(out))
@@ -159,5 +160,12 @@ func (suite *PulsarTestSuite) startPulsar(contName string) {
 		}
 		time.Sleep(2 * time.Second)
 	}
+	formmatedScript := fmt.Sprintf(pulsarStopCommand, contName)
+	outbytes, err := exec.Command("/bin/sh", "-c", formmatedScript).CombinedOutput()
+	if err != nil {
+		fmt.Println(string(outbytes), err.Error())
+	}
+	killPortProcess(suite.AppPortStart)
+	killPortProcess(suite.AdminPortStart)
 	suite.FailNow("failed to start pulsar")
 }
