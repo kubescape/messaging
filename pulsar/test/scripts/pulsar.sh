@@ -22,4 +22,4 @@ container_name=%s
 
 echo "Starting pulsar on port $app_port and admin port $admin_port"
 
-$cr run --name=container_name -d -p $app_port:6650  -p $admin_port:8080 docker.io/apachepulsar/pulsar:2.11.0 bin/pulsar standalone
+$cr run --name=$container_name -d -p $app_port:6650  -p $admin_port:8080 docker.io/apachepulsar/pulsar:2.11.0 bin/pulsar standalone

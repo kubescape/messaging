@@ -32,8 +32,8 @@ type PulsarTestSuite struct {
 	suite.Suite
 	DefaultTestConfig config.PulsarConfig
 	Client            connector.Client
-	appPortStart      int
-	adminPortStart    int
+	AppPortStart      int
+	AdminPortStart    int
 	shutdownFunc      func()
 }
 
@@ -48,11 +48,11 @@ func (suite *PulsarTestSuite) SetupSuite() {
 	}
 
 	randomContainerName := fmt.Sprintf("pulsar-test-%d", time.Now().UnixNano())
-	if suite.appPortStart == 0 {
-		suite.appPortStart = 6650
+	if suite.AppPortStart == 0 {
+		suite.AppPortStart = 6650
 	}
-	if suite.adminPortStart == 0 {
-		suite.adminPortStart = 8080
+	if suite.AdminPortStart == 0 {
+		suite.AdminPortStart = 8080
 	}
 	//start pulsar
 	suite.startPulsar(randomContainerName)
@@ -69,7 +69,10 @@ func (suite *PulsarTestSuite) SetupSuite() {
 		defer func() {
 			suite.Client.Close()
 			formmatedScript := fmt.Sprintf(pulsarStopCommand, randomContainerName)
-			exec.Command("/bin/sh", "-c", formmatedScript).Run()
+			outbytes, err := exec.Command("/bin/sh", "-c", formmatedScript).CombinedOutput()
+			if err != nil {
+				suite.FailNow("failed to stop pulsar", err.Error(), string(outbytes))
+			}
 		}()
 	}
 }
@@ -91,7 +94,6 @@ func (suite *PulsarTestSuite) checkPulsarIsAlive() bool {
 func (suite *PulsarTestSuite) TearDownSuite() {
 	suite.T().Log("tear down suite")
 	suite.shutdownFunc()
-	exec.Command("/bin/sh", "-c", pulsarStopCommand).Run()
 }
 
 func (suite *PulsarTestSuite) SetupTest() {
@@ -100,12 +102,14 @@ func (suite *PulsarTestSuite) SetupTest() {
 
 func (suite *PulsarTestSuite) TearDownTest() {
 	suite.T().Log("tear down test")
-	// clear all pulsar topics
-	suite.clearAllMessages()
+	// clear all pulsar topics messages
+	if err := suite.clearAllMessages(); err != nil {
+		suite.FailNow("failed to clear all messages", err.Error())
+	}
 }
 
 func findFreePort(rangeStart, rangeEnd int) (int, error) {
-	for port := rangeStart; port <= rangeStart; port++ {
+	for port := rangeStart; port <= rangeEnd; port++ {
 		address := fmt.Sprintf("localhost:%d", port)
 		conn, err := net.DialTimeout("tcp", address, 1*time.Second)
 		if conn != nil {
@@ -124,12 +128,12 @@ func (suite *PulsarTestSuite) startPulsar(contName string) {
 	exec.Command("/bin/sh", "-c", pulsarStopCommand).Run()
 	suite.T().Log("starting pulsar")
 
-	pulsarAppPort, err := findFreePort(suite.appPortStart, suite.appPortStart+100)
+	pulsarAppPort, err := findFreePort(suite.AppPortStart, suite.AppPortStart+100)
 	if err != nil {
 		suite.FailNow("failed to find free port", err.Error())
 	}
 	suite.DefaultTestConfig.URL = fmt.Sprintf("pulsar://localhost:%d", pulsarAppPort)
-	pulsarAdminPort, err := findFreePort(suite.adminPortStart, suite.adminPortStart+100)
+	pulsarAdminPort, err := findFreePort(suite.AdminPortStart, suite.AdminPortStart+100)
 	if err != nil {
 		suite.FailNow("failed to find free port for pulsar admin", err.Error())
 	}

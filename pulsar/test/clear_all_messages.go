@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 func (suite *PulsarTestSuite) clearAllMessages() error {
@@ -19,7 +20,7 @@ func (suite *PulsarTestSuite) clearAllMessages() error {
 			return err
 		}
 		for _, namespace := range namespaces {
-			topics, err := suite.getTopics(tenant, namespace)
+			topics, err := suite.getTopics(namespace)
 			if err != nil {
 				return err
 			}
@@ -28,7 +29,7 @@ func (suite *PulsarTestSuite) clearAllMessages() error {
 				if err != nil {
 					return err
 				}
-				for subscription := range subscriptions {
+				for _, subscription := range subscriptions {
 					err := suite.skipAllMessages(tenant, namespace, topic, subscription)
 					if err != nil {
 						return err
@@ -55,6 +56,7 @@ func (suite *PulsarTestSuite) getTenants() ([]string, error) {
 	return tenants, nil
 }
 
+// getNamespaces returns a list of namespaces for a given tenant in this format: ["public/default", "public/test"]
 func (suite *PulsarTestSuite) getNamespaces(tenant string) ([]string, error) {
 	resp, err := http.Get(suite.DefaultTestConfig.AdminUrl + "/admin/v2/namespaces/" + tenant)
 	if err != nil {
@@ -70,14 +72,21 @@ func (suite *PulsarTestSuite) getNamespaces(tenant string) ([]string, error) {
 	return namespaces, nil
 }
 
-func (suite *PulsarTestSuite) getTopics(tenant, namespace string) ([]string, error) {
-	resp, err := http.Get(suite.DefaultTestConfig.AdminUrl + "/admin/v2/persistent/" + tenant + "/" + namespace)
+// getTopics returns a list of topics for a given namespace(e.g. "public/default") in this format: ["persistent://public/default/test", "persistent://public/default/test2"]
+func (suite *PulsarTestSuite) getTopics(namespace string) ([]string, error) {
+	resp, err := http.Get(suite.DefaultTestConfig.AdminUrl + "/admin/v2/persistent/" + namespace)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get topics: %s", string(body))
+	}
 	var topics []string
 	if err := json.Unmarshal(body, &topics); err != nil {
 		return nil, err
@@ -86,15 +95,22 @@ func (suite *PulsarTestSuite) getTopics(tenant, namespace string) ([]string, err
 }
 
 // getSubscriptions returns a map of subscription names to subscription metadata
-func (suite *PulsarTestSuite) getSubscriptions(tenant, namespace, topic string) (map[string]interface{}, error) {
-	resp, err := http.Get(suite.DefaultTestConfig.AdminUrl + "/admin/v2/persistent/" + tenant + "/" + namespace + "/" + topic + "/subscriptions")
+func (suite *PulsarTestSuite) getSubscriptions(tenant, namespace, topic string) ([]string, error) {
+	topicPath := strings.Replace(topic, "://", "/", 1)
+	resp, err := http.Get(suite.DefaultTestConfig.AdminUrl + "/admin/v2/" + topicPath + "/subscriptions")
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
-	var subscriptions map[string]interface{}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get subscriptions: %d; %s", resp.StatusCode, string(body))
+	}
+	var subscriptions []string
 	if err := json.Unmarshal(body, &subscriptions); err != nil {
 		return nil, err
 	}
@@ -103,7 +119,9 @@ func (suite *PulsarTestSuite) getSubscriptions(tenant, namespace, topic string) 
 }
 
 func (suite *PulsarTestSuite) skipAllMessages(tenant, namespace, topic, subscription string) error {
-	req, err := http.NewRequest("POST", suite.DefaultTestConfig.AdminUrl+"/admin/v2/persistent/"+tenant+"/"+namespace+"/"+topic+"/subscription/"+subscription+"/skip_all", nil)
+	topicPath := strings.Replace(topic, "://", "/", 1)
+	fmt.Println("Skipping messages for", topicPath, subscription)
+	req, err := http.NewRequest("POST", suite.DefaultTestConfig.AdminUrl+"/admin/v2/"+topicPath+"/subscription/"+subscription+"/skip_all", nil)
 	if err != nil {
 		return err
 	}
@@ -115,7 +133,7 @@ func (suite *PulsarTestSuite) skipAllMessages(tenant, namespace, topic, subscrip
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
 		body, err := io.ReadAll(resp.Body)
 		fmt.Println("Error skipping messages:", string(body))
 		return err
