@@ -19,6 +19,9 @@ func killPortProcess(targetPort int) error {
 	}
 	for _, sock := range append(socks6, socks...) {
 		if sock.LocalAddr.Port == uint16(targetPort) {
+			if sock.Process == nil {
+				continue
+			}
 			pid := sock.Process.Pid
 			process, err := os.FindProcess(pid)
 			if err != nil {

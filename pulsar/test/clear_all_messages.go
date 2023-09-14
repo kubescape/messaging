@@ -20,6 +20,9 @@ func (suite *PulsarTestSuite) clearAllMessages() error {
 			return err
 		}
 		for _, namespace := range namespaces {
+			if strings.HasPrefix(namespace, "public/functions") {
+				continue
+			}
 			topics, err := suite.getTopics(namespace)
 			if err != nil {
 				return err
