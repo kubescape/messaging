@@ -2,6 +2,7 @@ package connector
 
 import (
 	"fmt"
+	"strings"
 )
 
 type TopicName string
@@ -24,4 +25,9 @@ func BuildPersistentTopic(tenant, namespace string, topicName TopicName) string 
 
 func BuildNonPersistentTopic(tenant, namespace string, topicName TopicName) string {
 	return BuildTopic(TopicTypeNonPersistent, tenant, namespace, topicName)
+}
+
+func GetTopicName(topic string) string {
+	parts := strings.Split(topic, "/")
+	return parts[len(parts)-1]
 }
