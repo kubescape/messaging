@@ -20,10 +20,15 @@ import (
 )
 
 const (
-	pulsarClientPort    = "6651"
-	pulsarAdminPort     = "8081"
-	pulsarDockerCommand = `docker run --name=pulsar-test -d -p %s:6650  -p %s:8080 docker.io/apachepulsar/pulsar:2.11.0 bin/pulsar standalone`
-	pulsarStopCommand   = "docker stop pulsar-test && docker rm pulsar-test"
+	pulsarClientPort = 6651
+	pulsarAdminPort  = 8081
+)
+
+var (
+	//go:embed scripts/pulsar.sh
+	pulsarDockerCommand string
+	//go:embed scripts/pulsar_stop.sh
+	pulsarStopCommand string
 )
 
 func TestBasicConnection(t *testing.T) {
@@ -39,8 +44,8 @@ type MainTestSuite struct {
 
 func (suite *MainTestSuite) SetupSuite() {
 	suite.defaultTestConfig = config.PulsarConfig{
-		URL:                    fmt.Sprintf("pulsar://localhost:%s", pulsarClientPort),
-		AdminUrl:               fmt.Sprintf("http://localhost:%s", pulsarAdminPort),
+		URL:                    fmt.Sprintf("pulsar://localhost:%d", pulsarClientPort),
+		AdminUrl:               fmt.Sprintf("http://localhost:%d", pulsarAdminPort),
 		Tenant:                 "ca-messaging",
 		Namespace:              "test-namespace",
 		Clusters:               []string{"standalone"},
@@ -70,7 +75,7 @@ func (suite *MainTestSuite) SetupSuite() {
 func (suite *MainTestSuite) TearDownSuite() {
 	suite.T().Log("tear down suite")
 	suite.shutdownFunc()
-	exec.Command("/bin/sh", "-c", pulsarStopCommand).Run()
+	exec.Command("/bin/sh", "-c", fmt.Sprintf(pulsarStopCommand, "basic-suite")).Run()
 
 }
 
@@ -100,7 +105,7 @@ func (suite *MainTestSuite) TestCreateProducer() {
 
 func (suite *MainTestSuite) TestCreateProducerFullTopic() {
 	//create producer
-	producer, err := suite.pulsarClient.NewProducer(WithProducerFullTopic("persistent://test-t/test-ns/test-topic"))
+	producer, err := suite.pulsarClient.NewProducer(WithProducerFullTopic("persistent://ca-messaging/test-namespace/test-topic"))
 	if err != nil {
 		suite.FailNow("failed to create producer", err.Error())
 	}
@@ -110,7 +115,7 @@ func (suite *MainTestSuite) TestCreateProducerFullTopic() {
 func (suite *MainTestSuite) TestCreateProducerFullTopicNonPersistent() {
 	//create producer
 	BuildNonPersistentTopic("test-t", "test-ns", "test-topic")
-	producer, err := suite.pulsarClient.NewProducer(WithProducerFullTopic("non-persistent://test-t/test-ns/test-topic"))
+	producer, err := suite.pulsarClient.NewProducer(WithProducerFullTopic("non-persistent://ca-messaging/test-namespace/test-topic"))
 	if err != nil {
 		suite.FailNow("failed to create producer", err.Error())
 	}
@@ -149,7 +154,7 @@ func (suite *MainTestSuite) startPulsar() {
 	time.Sleep(2 * time.Second)
 
 	suite.T().Log("starting pulsar")
-	out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf(pulsarDockerCommand, pulsarClientPort, pulsarAdminPort)).Output()
+	out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf(pulsarDockerCommand, pulsarClientPort, pulsarAdminPort, "basic-suite")).CombinedOutput()
 	if err != nil {
 		suite.FailNow("failed to start pulsar", err.Error(), string(out))
 	}
