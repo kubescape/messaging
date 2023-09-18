@@ -75,8 +75,10 @@ func (suite *MainTestSuite) SetupSuite() {
 func (suite *MainTestSuite) TearDownSuite() {
 	suite.T().Log("tear down suite")
 	suite.shutdownFunc()
-	exec.Command("/bin/sh", "-c", fmt.Sprintf(pulsarStopCommand, "basic-suite")).Run()
-
+	out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf(pulsarStopCommand, "basic-suite")).CombinedOutput()
+	if err != nil {
+		suite.FailNow("failed to stop pulsar", err.Error(), string(out))
+	}
 }
 
 func (suite *MainTestSuite) SetupTest() {
