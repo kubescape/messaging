@@ -22,6 +22,7 @@ type createConsumerOptions struct {
 	Topics               []TopicName
 	SubscriptionName     string
 	MaxDeliveryAttempts  uint32
+	dlqNamespace         string
 	RedeliveryDelay      time.Duration
 	MessageChannel       chan pulsar.ConsumerMessage
 	DefaultBackoffPolicy bool
@@ -42,6 +43,9 @@ func (opt *createConsumerOptions) defaults(config config.PulsarConfig) {
 	}
 	if opt.Namespace == "" {
 		opt.Namespace = config.Namespace
+	}
+	if opt.dlqNamespace == "" {
+		opt.dlqNamespace = opt.Namespace + "-dlqs"
 	}
 }
 
@@ -131,7 +135,7 @@ func newSharedConsumer(pulsarClient Client, createConsumerOpts ...CreateConsumer
 	}
 	var dlq *pulsar.DLQPolicy
 	if opts.MaxDeliveryAttempts != 0 {
-		dlq = NewDlq(opts.Tenant, opts.Namespace, opts.Topic, opts.MaxDeliveryAttempts)
+		dlq = NewDlq(opts.Tenant, opts.dlqNamespace, opts.Topic, opts.MaxDeliveryAttempts)
 	}
 	var topic string
 	var topics []string
