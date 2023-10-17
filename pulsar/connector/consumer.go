@@ -45,7 +45,7 @@ func (opt *createConsumerOptions) defaults(config config.PulsarConfig) {
 		opt.Namespace = config.Namespace
 	}
 	if opt.dlqNamespace == "" {
-		opt.dlqNamespace = opt.Namespace + "-dlqs"
+		opt.dlqNamespace = opt.Namespace + dlqNamespaceSuffix
 	}
 }
 
