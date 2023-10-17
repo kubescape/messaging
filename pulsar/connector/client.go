@@ -19,6 +19,8 @@ const (
 	adminPath            = "/admin/v2"
 	tenantsPath          = adminPath + "/tenants"
 	namespacesPath       = adminPath + "/namespaces"
+
+	dlqNamespaceSuffix = "-dlqs"
 )
 
 type PulsarClientOptions struct {
@@ -123,6 +125,11 @@ func NewClient(options ...func(*PulsarClientOptions)) (Client, error) {
 		log.Printf("creating namespace %s\n", namespacePath)
 		if initErr = pulsarAdminRequest(http.MethodPut, namespacePath, nil); initErr != nil {
 			return nil, fmt.Errorf("failed to create namespace: %w", initErr)
+		}
+		dlqNamespacePath := namespacePath + dlqNamespaceSuffix
+		log.Printf("creating dlq namespace %s\n", dlqNamespacePath)
+		if initErr = pulsarAdminRequest(http.MethodPut, dlqNamespacePath, nil); initErr != nil {
+			return nil, fmt.Errorf("failed to create dlq namespace: %w", initErr)
 		}
 	}
 	return pulsarClient, nil
