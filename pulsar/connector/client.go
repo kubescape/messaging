@@ -129,7 +129,7 @@ func NewClient(options ...func(*PulsarClientOptions)) (Client, error) {
 		dlqNamespacePath := namespacePath + dlqNamespaceSuffix
 		log.Printf("creating dlq namespace %s\n", dlqNamespacePath)
 		if initErr = pulsarAdminRequest(http.MethodPut, dlqNamespacePath, nil); initErr != nil {
-			return nil, fmt.Errorf("failed to create namespace: %w", initErr)
+			return nil, fmt.Errorf("failed to create dlq namespace: %w", initErr)
 		}
 	}
 	return pulsarClient, nil
