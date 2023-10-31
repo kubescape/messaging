@@ -133,10 +133,7 @@ func newSharedConsumer(pulsarClient Client, createConsumerOpts ...CreateConsumer
 	if err := opts.validate(); err != nil {
 		return nil, err
 	}
-	var dlq *pulsar.DLQPolicy
-	if opts.MaxDeliveryAttempts != 0 {
-		dlq = NewDlq(opts.Tenant, opts.dlqNamespace, opts.Topic, opts.MaxDeliveryAttempts)
-	}
+
 	var topic string
 	var topics []string
 	if opts.Topic != "" {
@@ -146,6 +143,14 @@ func newSharedConsumer(pulsarClient Client, createConsumerOpts ...CreateConsumer
 		for i, t := range opts.Topics {
 			topics[i] = BuildPersistentTopic(opts.Tenant, opts.Namespace, t)
 		}
+	}
+	var dlq *pulsar.DLQPolicy
+	if opts.MaxDeliveryAttempts != 0 {
+		topicName := opts.Topic
+		if topicName == "" && len(opts.Topics) > 0 {
+			topicName = opts.Topics[0]
+		}
+		dlq = NewDlq(opts.Tenant, opts.dlqNamespace, topicName, opts.MaxDeliveryAttempts)
 	}
 	pulsarConsumer, err := pulsarClient.Subscribe(pulsar.ConsumerOptions{
 		Topic:                          topic,
