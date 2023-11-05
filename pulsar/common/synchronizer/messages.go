@@ -6,6 +6,8 @@ const (
 	MsgPropEventValueGetObjectMessage    = "GetObject"
 	MsgPropEventValuePatchObjectMessage  = "PatchObject"
 	MsgPropEventValueVerifyObjectMessage = "VerifyObject"
+	MsgPropEventValueDeleteObjectMessage = "DeleteObject"
+	MsgPropEventValuePutObjectMessage    = "PutObject"
 )
 
 // FIXME we need to document how to process these messages
@@ -31,7 +33,7 @@ type GetObjectMessage struct {
 	Name         string `json:"name"`
 }
 
-type NewChecksumMessage struct {
+type NewChecksumMessage struct { // How is this different from VerifyObjectMessage?
 	Checksum     string `json:"checksum"`
 	ClusterName  string `json:"clusterName"`
 	CustomerGUID string `json:"customerGUID,omitempty" bson:"customerGUID,omitempty"`
