@@ -8,6 +8,7 @@ const (
 	MsgPropEventValueVerifyObjectMessage = "VerifyObject"
 	MsgPropEventValueDeleteObjectMessage = "DeleteObject"
 	MsgPropEventValuePutObjectMessage    = "PutObject"
+	MsgPropEventValueServerConnected     = "ServerConnected"
 )
 
 // FIXME we need to document how to process these messages
@@ -82,4 +83,11 @@ type VerifyObjectMessage struct {
 	Kind         string `json:"kind"`
 	MsgId        string `json:"msgId"`
 	Name         string `json:"name"`
+}
+
+type ServerConnectedMessage struct {
+	ClusterName  string `json:"clusterName"`
+	CustomerGUID string `json:"customerGUID,omitempty" bson:"customerGUID,omitempty"`
+	Depth        int    `json:"depth"`
+	MsgId        string `json:"msgId"`
 }
