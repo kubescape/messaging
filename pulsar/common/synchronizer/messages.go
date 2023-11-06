@@ -2,13 +2,13 @@ package synchronizer
 
 const (
 	// MsgPropEvent is the property name for the event type
-	MsgPropEvent                         = "event"
-	MsgPropEventValueGetObjectMessage    = "GetObject"
-	MsgPropEventValuePatchObjectMessage  = "PatchObject"
-	MsgPropEventValueVerifyObjectMessage = "VerifyObject"
-	MsgPropEventValueDeleteObjectMessage = "DeleteObject"
-	MsgPropEventValuePutObjectMessage    = "PutObject"
-	MsgPropEventValueServerConnected     = "ServerConnected"
+	MsgPropEvent                            = "event"
+	MsgPropEventValueGetObjectMessage       = "GetObject"
+	MsgPropEventValuePatchObjectMessage     = "PatchObject"
+	MsgPropEventValueVerifyObjectMessage    = "VerifyObject"
+	MsgPropEventValueDeleteObjectMessage    = "DeleteObject"
+	MsgPropEventValuePutObjectMessage       = "PutObject"
+	MsgPropEventValueServerConnectedMessage = "ServerConnected"
 )
 
 // FIXME we need to document how to process these messages
