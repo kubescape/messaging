@@ -1,5 +1,11 @@
 package synchronizer
 
+import (
+	"time"
+
+	"github.com/apache/pulsar-client-go/pulsar"
+)
+
 const (
 	MsgPropTimestamp = "timestamp"
 	// MsgPropCluster is the property name for the cluster name
@@ -95,4 +101,18 @@ type ServerConnectedMessage struct {
 	Account string `json:"account"`
 	Depth   int    `json:"depth"`
 	MsgId   string `json:"msgId"`
+}
+
+func CreateProducerMessage(producerMessageKey, account, cluster, eventType string, payload []byte) *pulsar.ProducerMessage {
+	producerMessageProperties := map[string]string{
+		MsgPropTimestamp: time.Now().Format(time.RFC3339Nano),
+		MsgPropAccount:   account,
+		MsgPropCluster:   cluster,
+		MsgPropEvent:     eventType,
+	}
+	return &pulsar.ProducerMessage{
+		Payload:    payload,
+		Properties: producerMessageProperties,
+		Key:        producerMessageKey,
+	}
 }
