@@ -7,7 +7,7 @@ const (
 
 // other consts
 const (
-	platformProperty    = "platform"
-	environmentProperty = "environment"
-	googlePlatform      = "google"
+	PlatformProperty    = "platform"
+	EnvironmentProperty = "environment"
+	GooglePlatform      = "google"
 )
