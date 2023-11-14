@@ -46,7 +46,7 @@ func getProcessesForPort(targetPort int) ([]int, error) {
 	case windows:
 		cmd = exec.Command("cmd", "/c", "netstat", "-ano", "|", "findstr", fmt.Sprintf(":%d", targetPort))
 	default:
-		cmd = exec.Command("sh", "-c", fmt.Sprintf("lsof -i tcp:%d | awk 'NR!=1 {print $2}'", targetPort))
+		cmd = exec.Command("sh", "-c", fmt.Sprintf("lsof -iTCP:%d -n -P | awk '/.*LISTEN.*/ { print $2 }'", targetPort))
 	}
 	output, err := cmd.Output()
 	if err != nil {
