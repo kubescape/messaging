@@ -36,7 +36,7 @@ func (opt *createConsumerOptions) defaults(config config.PulsarConfig) {
 		opt.MaxDeliveryAttempts = uint32(config.MaxDeliveryAttempts)
 	}
 	if opt.RedeliveryDelay == 0 {
-		opt.RedeliveryDelay = time.Duration(config.RedeliveryDelaySeconds)
+		opt.RedeliveryDelay = time.Second * time.Duration(config.RedeliveryDelaySeconds)
 	}
 	if opt.Tenant == "" {
 		opt.Tenant = config.Tenant
