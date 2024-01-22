@@ -14,6 +14,8 @@ func NewDlq(tenant, namespace string, topic TopicName, maxDeliveryAttempts uint3
 		ProducerOptions: pulsar.ProducerOptions{
 			//TODO: OTL
 			//		Interceptors: tracer.NewProducerInterceptors(ctx),
+			DisableBatching: true,
+			EnableChunking:  true,
 		},
 	}
 }
