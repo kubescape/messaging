@@ -29,6 +29,7 @@ type createConsumerOptions struct {
 	BackoffPolicy        pulsar.NackBackoffPolicy
 	Tenant               string
 	Namespace            string
+	RetryEnable          bool
 }
 
 func (opt *createConsumerOptions) defaults(config config.PulsarConfig) {
@@ -73,6 +74,12 @@ func WithNamespace(tenant, namespace string) CreateConsumerOption {
 }
 
 type CreateConsumerOption func(*createConsumerOptions)
+
+func WithRetryEnable(retryEnable bool) CreateConsumerOption {
+	return func(o *createConsumerOptions) {
+		o.RetryEnable = retryEnable
+	}
+}
 
 func WithRedeliveryDelay(redeliveryDelay time.Duration) CreateConsumerOption {
 	return func(o *createConsumerOptions) {
@@ -160,7 +167,7 @@ func newSharedConsumer(pulsarClient Client, createConsumerOpts ...CreateConsumer
 		MessageChannel:                 opts.MessageChannel,
 		DLQ:                            dlq,
 		EnableDefaultNackBackoffPolicy: opts.DefaultBackoffPolicy,
-
+		RetryEnable:                    opts.RetryEnable,
 		//	Interceptors:        tracer.NewConsumerInterceptors(ctx),
 		NackRedeliveryDelay: opts.RedeliveryDelay,
 		NackBackoffPolicy:   opts.BackoffPolicy,
