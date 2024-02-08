@@ -78,6 +78,43 @@ func (suite *MainTestSuite) TestConsumerAndProducer() {
 	suite.Equal(2, len(actualPayloads), "expected 2 messages")
 }
 
+func (suite *MainTestSuite) TestReConsumerLater() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	producer, err := CreateTestProducer(ctx, suite.pulsarClient)
+	if err != nil {
+		suite.FailNow(err.Error(), "create producer")
+	}
+	if producer == nil {
+		suite.FailNow("producer is nil")
+	}
+	defer producer.Close()
+	//create consumer to get actual payloads
+	consumer, err := CreateTestConsumer(ctx, suite.pulsarClient)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	defer consumer.Close()
+
+	//produce
+	if _, err := producer.Send(ctx, &pulsar.ProducerMessage{Payload: []byte("hello workld")}); err != nil {
+		suite.FailNow(err.Error(), "send payload")
+	}
+	//consume
+	testConsumerCtx, consumerCancel := context.WithTimeout(ctx, time.Second*time.Duration(time.Second*2))
+	defer consumerCancel()
+	msg, err := consumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "receive payload")
+	}
+	//reconsume
+	consumer.ReconsumeLater(msg, time.Millisecond*5)
+	msg, err = consumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "reconsume payload")
+	}
+}
+
 // CreateTestProducer creates a producer
 func CreateTestProducer(ctx context.Context, client Client) (pulsar.Producer, error) {
 
@@ -100,6 +137,7 @@ func CreateTestConsumer(ctx context.Context, client Client) (pulsar.Consumer, er
 		WithRedeliveryDelay(time.Duration(client.GetConfig().RedeliveryDelaySeconds)*time.Second),
 		WithDLQ(uint32(client.GetConfig().MaxDeliveryAttempts)),
 		WithDefaultBackoffPolicy(),
+		WithRetryEnable(true),
 	)
 
 }
