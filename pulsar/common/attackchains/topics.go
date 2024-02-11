@@ -7,6 +7,7 @@ const (
 	AttackChainStateDeleteTopic      = "attack-chain-delete-v1"
 	KubescapeScanReportFinishedTopic = "kubescape-scan-report-finished-v1"
 	ContainerScanReportFinishedTopic = "container-scan-report-finished-v1"
+	AttackChainScanReportFinishTopic = "attack-chain-scan-report-finished-v1"
 )
 
 // --------- Ingesters structs and consts -------------
