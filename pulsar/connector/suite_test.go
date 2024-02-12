@@ -118,7 +118,9 @@ func (suite *MainTestSuite) TearDownTest() {
 					return err
 				}
 			}
-			consumer.Ack(msg)
+			if err := consumer.Ack(msg); err != nil {
+				suite.FailNow(err.Error())
+			}
 			if suite.failOnUnconsummedMessages {
 				return fmt.Errorf("unconsumed message topic:%s \npayload:%s \nproperites:%v", msg.Topic(), msg.Payload(), msg.Properties())
 			}
@@ -134,7 +136,9 @@ func (suite *MainTestSuite) TearDownTest() {
 					return err
 				}
 			}
-			dlqConsumer.Ack(msg)
+			if err := dlqConsumer.Ack(msg); err != nil {
+				suite.FailNow(err.Error())
+			}
 			if suite.failOnUnconsummedMessages {
 				return fmt.Errorf("unconsumed message topic:%s \npayload:%s \nproperites:%v", msg.Topic(), msg.Payload(), msg.Properties())
 			}
@@ -288,7 +292,9 @@ func consumeMessages[P TestPayload](suite *MainTestSuite, ctx context.Context, c
 		}
 		actualPayloads[payload.GetId()] = payload
 		fmt.Printf("%s: Ack() - ID %s", consumerId, payload.GetId())
-		consumer.Ack(msg)
+		if err := consumer.Ack(msg); err != nil {
+			suite.FailNow(err.Error())
+		}
 	}
 	return actualPayloads
 }
@@ -427,7 +433,9 @@ func (suite *MainTestSuite) TestReconsumeLaterWithNacks() {
 	if err != nil {
 		suite.FailNow(err.Error(), "reconsume payload")
 	}
-	dlqConsumer.Ack(msg)
+	if err := dlqConsumer.Ack(msg); err != nil {
+		suite.FailNow(err.Error())
+	}
 	testMsg(msg)
 	//fail on test teardown if there are unconsumed messages
 	suite.failOnUnconsummedMessages = true
@@ -502,7 +510,9 @@ func (suite *MainTestSuite) TestReconsumeLaterMaxAttemps() {
 	if err != nil {
 		suite.FailNow(err.Error(), "reconsume payload")
 	}
-	dlqConsumer.Ack(msg)
+	if err := dlqConsumer.Ack(msg); err != nil {
+		suite.FailNow(err.Error())
+	}
 	testMsg(msg)
 	//fail on test teardown if there are unconsumed messages
 	suite.failOnUnconsummedMessages = true
@@ -565,7 +575,9 @@ func (suite *MainTestSuite) TestReconsumeLater() {
 	}
 	testMsg(msg)
 	suite.False(consumer.IsReconsumable(msg), "expect message not to be reconsumable")
-	consumer.Ack(msg)
+	if err := consumer.Ack(msg); err != nil {
+		suite.FailNow(err.Error())
+	}
 	//fail on test teardown if there are unconsumed messages
 	suite.failOnUnconsummedMessages = true
 
@@ -636,7 +648,9 @@ func (suite *MainTestSuite) TestReconsumeLaterWithDuration() {
 	if err != nil {
 		suite.FailNow(err.Error(), "reconsume payload")
 	}
-	dlqConsumer.Ack(msg)
+	if err := dlqConsumer.Ack(msg); err != nil {
+		suite.FailNow(err.Error())
+	}
 	testMsg(msg)
 
 	//fail on test teardown if there are unconsumed messages
@@ -700,7 +714,9 @@ func (suite *MainTestSuite) TestSafeReconsumeLaterWithDuration() {
 	//reconsume anyway
 	sent := consumer.SafeReconsumeLater(msg, time.Millisecond*5)
 	suite.False(sent, "expect reconsume to send message")
-	consumer.Ack(msg)
+	if err := consumer.Ack(msg); err != nil {
+		suite.FailNow(err.Error())
+	}
 	//fail on test teardown if there are unconsumed messages
 	suite.failOnUnconsummedMessages = true
 }
