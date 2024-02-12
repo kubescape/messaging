@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os/exec"
+	"sync"
 
 	"net/http"
 	"testing"
@@ -12,7 +13,9 @@ import (
 
 	"encoding/json"
 
+	"github.com/kubescape/messaging/pulsar/common/utils"
 	"github.com/kubescape/messaging/pulsar/config"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/apache/pulsar-client-go/pulsar"
 
@@ -37,9 +40,10 @@ func TestBasicConnection(t *testing.T) {
 
 type MainTestSuite struct {
 	suite.Suite
-	defaultTestConfig config.PulsarConfig
-	pulsarClient      Client
-	shutdownFunc      func()
+	failOnUnconsummedMessages bool
+	defaultTestConfig         config.PulsarConfig
+	pulsarClient              Client
+	shutdownFunc              func()
 }
 
 func (suite *MainTestSuite) SetupSuite() {
@@ -83,6 +87,63 @@ func (suite *MainTestSuite) TearDownSuite() {
 
 func (suite *MainTestSuite) SetupTest() {
 	// suite.T().Log("setup test")
+}
+
+func (suite *MainTestSuite) TearDownTest() {
+	//cleanup unconsumed messages
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*200)
+	defer cancel()
+	reconsumeLaterOptions := []CreateConsumerOption{
+		WithRetryEnable(true, false, 0),
+	}
+	consumer, err := CreateTestConsumer(ctx, suite.pulsarClient, reconsumeLaterOptions...)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	defer consumer.Close()
+
+	dlqConsumer, err := CreateTestDlqConsumer(suite.pulsarClient)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	defer dlqConsumer.Close()
+	errg := errgroup.Group{}
+	errg.Go(func() error {
+		for {
+			msg, err := consumer.Receive(ctx)
+			if err != nil {
+				if ctx.Err() != nil {
+					return nil
+				} else {
+					return err
+				}
+			}
+			consumer.Ack(msg)
+			if suite.failOnUnconsummedMessages {
+				return fmt.Errorf("unconsumed message topic:%s \npayload:%s \nproperites:%v", msg.Topic(), msg.Payload(), msg.Properties())
+			}
+		}
+	})
+	errg.Go(func() error {
+		for {
+			msg, err := dlqConsumer.Receive(ctx)
+			if err != nil {
+				if ctx.Err() != nil {
+					return nil
+				} else {
+					return err
+				}
+			}
+			dlqConsumer.Ack(msg)
+			if suite.failOnUnconsummedMessages {
+				return fmt.Errorf("unconsumed message topic:%s \npayload:%s \nproperites:%v", msg.Topic(), msg.Payload(), msg.Properties())
+			}
+		}
+	})
+	if err := errg.Wait(); err != nil {
+		suite.FailNow(err.Error())
+	}
+	suite.failOnUnconsummedMessages = false
 }
 
 func (suite *MainTestSuite) TestCreateConsumer() {
@@ -230,4 +291,514 @@ func consumeMessages[P TestPayload](suite *MainTestSuite, ctx context.Context, c
 		consumer.Ack(msg)
 	}
 	return actualPayloads
+}
+
+func (suite *MainTestSuite) TestDLQ() {
+	//start tenant check
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	//create producer to input test payloads
+	pubsubCtx := utils.NewContextWithValues(ctx, "testConsumer")
+	producer, err := CreateTestProducer(pubsubCtx, suite.pulsarClient)
+	if err != nil {
+		suite.FailNow(err.Error(), "create producer")
+	}
+	if producer == nil {
+		suite.FailNow("producer is nil")
+	}
+	defer producer.Close()
+	//create consumer to get actual payloads
+	consumer, err := CreateTestConsumer(pubsubCtx, suite.pulsarClient)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	defer consumer.Close()
+	dlqConsumer, err := CreateTestDlqConsumer(suite.pulsarClient)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	defer dlqConsumer.Close()
+
+	testPayload := []byte("[{\"id\":\"1\",\"data\":\"Hello World\"},{\"id\":2,\"data\":\"Hello from the other World\"}]")
+
+	//send test payloads
+	produceMessages(suite, ctx, producer, loadJson[[]TestPayloadImplInterface](testPayload))
+	//sleep to allow redelivery
+	time.Sleep(time.Second * 5)
+	//create next stage consumer and dlq consumer
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	var actualPayloads map[string]TestPayloadImpl
+	go func() {
+		defer wg.Done()
+		// consume payloads for one second
+		actualPayloads = consumeMessages[TestPayloadImpl](suite, pubsubCtx, consumer, "consumer", 20)
+		//sleep to allow redelivery
+		//
+	}()
+	var dlqPayloads map[string]TestInvalidPayloadImpl
+	go func() {
+		defer wg.Done()
+		time.Sleep(time.Second * 10)
+		// consume payloads for one second
+		dlqPayloads = consumeMessages[TestInvalidPayloadImpl](suite, pubsubCtx, dlqConsumer, "dlqConsumer", 20)
+	}()
+	wg.Wait()
+
+	suite.Equal(1, len(actualPayloads), "expected 1 msg in successful consumer")
+	suite.Contains(actualPayloads, "1", "expected msg with ID 1 in successful consumer")
+
+	suite.Equal(1, len(dlqPayloads), "expected 1 msg in dlq consumer")
+	suite.Contains(dlqPayloads, "2", "expected msg with ID 2 in dlq consumer")
+}
+
+func (suite *MainTestSuite) TestReconsumeLaterWithNacks() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	producer, err := CreateTestProducer(ctx, suite.pulsarClient)
+	if err != nil {
+		suite.FailNow(err.Error(), "create producer")
+	}
+	if producer == nil {
+		suite.FailNow("producer is nil")
+	}
+	defer producer.Close()
+	reconsumeLaterOptions := []CreateConsumerOption{
+		WithRetryEnable(true, false, 0),
+	}
+	//create consumer to get actual payloads
+	consumer, err := CreateTestConsumer(ctx, suite.pulsarClient, reconsumeLaterOptions...)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	defer consumer.Close()
+
+	dlqConsumer, err := CreateTestDlqConsumer(suite.pulsarClient)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	defer dlqConsumer.Close()
+	//produce
+	if _, err := producer.Send(ctx, &pulsar.ProducerMessage{Payload: []byte(suite.T().Name())}); err != nil {
+		suite.FailNow(err.Error(), "send payload")
+	}
+	testMsg := func(msg pulsar.Message) {
+		if msg == nil {
+			suite.FailNow("msg is nil")
+		}
+		if string(msg.Payload()) != suite.T().Name() {
+			suite.FailNow("unexpected payload")
+		}
+	}
+	//consume
+	testConsumerCtx, consumerCancel := context.WithTimeout(ctx, time.Second*time.Duration(time.Second*2))
+	defer consumerCancel()
+	msg, err := consumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "receive payload")
+	}
+	testMsg(msg)
+	//reconsume
+	consumer.ReconsumeLater(msg, time.Millisecond*5)
+	msg, err = consumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "reconsume payload")
+	}
+	testMsg(msg)
+	//reconsume again
+	consumer.ReconsumeLater(msg, time.Millisecond*5)
+	msg, err = consumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "reconsume payload")
+	}
+	testMsg(msg)
+	suite.False(consumer.IsReconsumable(msg), "expect message not to be reconsumable")
+	consumer.Nack(msg)
+	msg, err = consumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "reconsume payload")
+	}
+	testMsg(msg)
+	//nack again - 2nd redelivery
+	consumer.Nack(msg)
+	//expect dlq
+	msg, err = dlqConsumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "reconsume payload")
+	}
+	dlqConsumer.Ack(msg)
+	testMsg(msg)
+	//fail on test teardown if there are unconsumed messages
+	suite.failOnUnconsummedMessages = true
+
+}
+
+func (suite *MainTestSuite) TestReconsumeLaterMaxAttemps() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	producer, err := CreateTestProducer(ctx, suite.pulsarClient)
+	if err != nil {
+		suite.FailNow(err.Error(), "create producer")
+	}
+	if producer == nil {
+		suite.FailNow("producer is nil")
+	}
+	defer producer.Close()
+	//create consumer to get actual payloads
+	reconsumeLaterOptions := []CreateConsumerOption{
+		WithRetryEnable(true, false, 0),
+	}
+	consumer, err := CreateTestConsumer(ctx, suite.pulsarClient, reconsumeLaterOptions...)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	defer consumer.Close()
+
+	dlqConsumer, err := CreateTestDlqConsumer(suite.pulsarClient)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	defer dlqConsumer.Close()
+	//produce
+	if _, err := producer.Send(ctx, &pulsar.ProducerMessage{Payload: []byte(suite.T().Name())}); err != nil {
+		suite.FailNow(err.Error(), "send payload")
+	}
+	testMsg := func(msg pulsar.Message) {
+		if msg == nil {
+			suite.FailNow("msg is nil")
+		}
+		if string(msg.Payload()) != suite.T().Name() {
+			suite.FailNow("unexpected payload")
+		}
+	}
+	//consume
+	testConsumerCtx, consumerCancel := context.WithTimeout(ctx, time.Second*time.Duration(time.Second*2))
+	defer consumerCancel()
+	msg, err := consumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "receive payload")
+	}
+	testMsg(msg)
+	//reconsume
+	consumer.ReconsumeLater(msg, time.Millisecond*5)
+	msg, err = consumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "reconsume payload")
+	}
+	testMsg(msg)
+	//reconsume again
+	consumer.ReconsumeLater(msg, time.Millisecond*5)
+	msg, err = consumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "reconsume payload")
+	}
+	testMsg(msg)
+	suite.False(consumer.IsReconsumable(msg), "expect message not to be reconsumable")
+	//reconsume again - this time it should go to dlq
+	consumer.ReconsumeLater(msg, time.Millisecond*5)
+	//expect dlq
+	msg, err = dlqConsumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "reconsume payload")
+	}
+	dlqConsumer.Ack(msg)
+	testMsg(msg)
+	//fail on test teardown if there are unconsumed messages
+	suite.failOnUnconsummedMessages = true
+
+}
+
+func (suite *MainTestSuite) TestReconsumeLater() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	producer, err := CreateTestProducer(ctx, suite.pulsarClient)
+	if err != nil {
+		suite.FailNow(err.Error(), "create producer")
+	}
+	if producer == nil {
+		suite.FailNow("producer is nil")
+	}
+	defer producer.Close()
+	//create consumer to get actual payloads
+	reconsumeLaterOptions := []CreateConsumerOption{
+		WithRetryEnable(true, false, 0),
+	}
+	consumer, err := CreateTestConsumer(ctx, suite.pulsarClient, reconsumeLaterOptions...)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	defer consumer.Close()
+
+	//produce
+	if _, err := producer.Send(ctx, &pulsar.ProducerMessage{Payload: []byte(suite.T().Name())}); err != nil {
+		suite.FailNow(err.Error(), "send payload")
+	}
+	testMsg := func(msg pulsar.Message) {
+		if msg == nil {
+			suite.FailNow("msg is nil")
+		}
+		if string(msg.Payload()) != suite.T().Name() {
+			suite.FailNow("unexpected payload")
+		}
+	}
+	//consume
+	testConsumerCtx, consumerCancel := context.WithTimeout(ctx, time.Second*time.Duration(time.Second*2))
+	defer consumerCancel()
+	msg, err := consumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "receive payload")
+	}
+	testMsg(msg)
+	//reconsume
+	consumer.ReconsumeLater(msg, time.Millisecond*5)
+	msg, err = consumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "reconsume payload")
+	}
+	testMsg(msg)
+	//reconsume again
+	consumer.ReconsumeLater(msg, time.Millisecond*5)
+	msg, err = consumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "reconsume payload")
+	}
+	testMsg(msg)
+	suite.False(consumer.IsReconsumable(msg), "expect message not to be reconsumable")
+	consumer.Ack(msg)
+	//fail on test teardown if there are unconsumed messages
+	suite.failOnUnconsummedMessages = true
+
+}
+
+func (suite *MainTestSuite) TestReconsumeLaterWithDuration() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	producer, err := CreateTestProducer(ctx, suite.pulsarClient)
+	if err != nil {
+		suite.FailNow(err.Error(), "create producer")
+	}
+	if producer == nil {
+		suite.FailNow("producer is nil")
+	}
+	defer producer.Close()
+	//create consumer to get actual payloads
+	reconsumeLaterOptions := []CreateConsumerOption{
+		WithRetryEnable(true, false, time.Second*2),
+	}
+	consumer, err := CreateTestConsumer(ctx, suite.pulsarClient, reconsumeLaterOptions...)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	defer consumer.Close()
+
+	dlqConsumer, err := CreateTestDlqConsumer(suite.pulsarClient)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	defer dlqConsumer.Close()
+
+	//produce
+	if _, err := producer.Send(ctx, &pulsar.ProducerMessage{Payload: []byte(suite.T().Name())}); err != nil {
+		suite.FailNow(err.Error(), "send payload")
+	}
+	testMsg := func(msg pulsar.Message) {
+		if msg == nil {
+			suite.FailNow("msg is nil")
+		}
+		if string(msg.Payload()) != suite.T().Name() {
+			suite.FailNow("unexpected payload")
+		}
+	}
+	//consume
+	testConsumerCtx, consumerCancel := context.WithTimeout(ctx, time.Second*time.Duration(time.Second*2))
+	defer consumerCancel()
+	msg, err := consumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "receive payload")
+	}
+	testMsg(msg)
+	//reconsume 20 times
+	for i := 0; i < 20; i++ {
+		consumer.ReconsumeLater(msg, time.Millisecond*5)
+		msg, err = consumer.Receive(testConsumerCtx)
+		if err != nil {
+			suite.FailNow(err.Error(), "reconsume payload")
+		}
+		testMsg(msg)
+	}
+	time.Sleep(time.Millisecond * 2300)
+	suite.False(consumer.IsReconsumable(msg), "expect message not to be reconsumable")
+	//reconsume anyway
+	consumer.ReconsumeLater(msg, time.Millisecond*5)
+	//expect dlq
+	msg, err = dlqConsumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "reconsume payload")
+	}
+	dlqConsumer.Ack(msg)
+	testMsg(msg)
+
+	//fail on test teardown if there are unconsumed messages
+	suite.failOnUnconsummedMessages = true
+}
+
+func (suite *MainTestSuite) TestSafeReconsumeLaterWithDuration() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	producer, err := CreateTestProducer(ctx, suite.pulsarClient)
+	if err != nil {
+		suite.FailNow(err.Error(), "create producer")
+	}
+	if producer == nil {
+		suite.FailNow("producer is nil")
+	}
+	defer producer.Close()
+	//create consumer to get actual payloads
+	reconsumeLaterOptions := []CreateConsumerOption{
+		WithRetryEnable(true, false, time.Second*2),
+	}
+	consumer, err := CreateTestConsumer(ctx, suite.pulsarClient, reconsumeLaterOptions...)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	defer consumer.Close()
+	//produce
+	if _, err := producer.Send(ctx, &pulsar.ProducerMessage{Payload: []byte(suite.T().Name())}); err != nil {
+		suite.FailNow(err.Error(), "send payload")
+	}
+	testMsg := func(msg pulsar.Message) {
+		if msg == nil {
+			suite.FailNow("msg is nil")
+		}
+		if string(msg.Payload()) != suite.T().Name() {
+			suite.FailNow("unexpected payload")
+		}
+	}
+	//consume
+	testConsumerCtx, consumerCancel := context.WithTimeout(ctx, time.Second*time.Duration(2))
+	defer consumerCancel()
+	msg, err := consumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "receive payload")
+	}
+	testMsg(msg)
+	//reconsume 20 times
+	for i := 0; i < 20; i++ {
+		sent := consumer.SafeReconsumeLater(msg, time.Millisecond)
+		if !sent {
+			suite.FailNow("expected to message to be reconsumed got false in meesage num ", i)
+		}
+		msg, err = consumer.Receive(testConsumerCtx)
+		if err != nil {
+			suite.FailNow(err.Error(), "reconsume payload")
+		}
+		testMsg(msg)
+	}
+	time.Sleep(time.Millisecond * 2300)
+	suite.False(consumer.IsReconsumable(msg), "expect message not to be reconsumable")
+	//reconsume anyway
+	sent := consumer.SafeReconsumeLater(msg, time.Millisecond*5)
+	suite.False(sent, "expect reconsume to send message")
+	consumer.Ack(msg)
+	//fail on test teardown if there are unconsumed messages
+	suite.failOnUnconsummedMessages = true
+}
+
+func (suite *MainTestSuite) TestReconsumeLaterPanicOnRetryDisabled() {
+	defer func() {
+		if r := recover(); r == nil {
+			suite.T().Errorf("The code did not panic")
+		} else {
+			suite.T().Logf("Recovered in TestReconsumeLaterPanics: %v", r)
+		}
+	}()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	producer, err := CreateTestProducer(ctx, suite.pulsarClient)
+	if err != nil {
+		suite.FailNow(err.Error(), "create producer")
+	}
+	if producer == nil {
+		suite.FailNow("producer is nil")
+	}
+	defer producer.Close()
+
+	noRetrayEnabledConsumer, err := CreateTestConsumer(ctx, suite.pulsarClient)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	defer noRetrayEnabledConsumer.Close()
+	//produce
+	if _, err := producer.Send(ctx, &pulsar.ProducerMessage{Payload: []byte(suite.T().Name())}); err != nil {
+		suite.FailNow(err.Error(), "send payload")
+	}
+	testMsg := func(msg pulsar.Message) {
+		if msg == nil {
+			suite.FailNow("msg is nil")
+		}
+		if string(msg.Payload()) != suite.T().Name() {
+			suite.FailNow("unexpected payload")
+		}
+	}
+	//consume
+	testConsumerCtx, consumerCancel := context.WithTimeout(ctx, time.Second*time.Duration(2))
+	defer consumerCancel()
+	msg, err := noRetrayEnabledConsumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "receive payload")
+	}
+	testMsg(msg)
+	noRetrayEnabledConsumer.ReconsumeLater(msg, time.Millisecond)
+	suite.FailNow("should panic on call reconsume when retry option is not enabled")
+}
+
+func (suite *MainTestSuite) TestReconsumeLaterPanicOnUnSafeReconsume() {
+	defer func() {
+		if r := recover(); r == nil {
+			suite.T().Errorf("The code did not panic")
+		} else {
+			suite.T().Logf("Recovered in TestReconsumeLaterPanicOnUnSafeReconsume: %v", r)
+		}
+	}()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	producer, err := CreateTestProducer(ctx, suite.pulsarClient)
+	if err != nil {
+		suite.FailNow(err.Error(), "create producer")
+	}
+	if producer == nil {
+		suite.FailNow("producer is nil")
+	}
+	defer producer.Close()
+	reconsumeLaterOptions := []CreateConsumerOption{
+		WithRetryEnable(true, true, time.Second*2),
+	}
+	safeOnlyEnabledConsumer, err := CreateTestConsumer(ctx, suite.pulsarClient, reconsumeLaterOptions...)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	defer safeOnlyEnabledConsumer.Close()
+	//produce
+	if _, err := producer.Send(ctx, &pulsar.ProducerMessage{Payload: []byte(suite.T().Name())}); err != nil {
+		suite.FailNow(err.Error(), "send payload")
+	}
+	testMsg := func(msg pulsar.Message) {
+		if msg == nil {
+			suite.FailNow("msg is nil")
+		}
+		if string(msg.Payload()) != suite.T().Name() {
+			suite.FailNow("unexpected payload")
+		}
+	}
+	//consume
+	testConsumerCtx, consumerCancel := context.WithTimeout(ctx, time.Second*time.Duration(2))
+	defer consumerCancel()
+	msg, err := safeOnlyEnabledConsumer.Receive(testConsumerCtx)
+	if err != nil {
+		suite.FailNow(err.Error(), "receive payload")
+	}
+	testMsg(msg)
+	safeOnlyEnabledConsumer.ReconsumeLater(msg, time.Millisecond)
+	suite.FailNow("should panic on call ReconsumeLater when safe only option is set")
 }
