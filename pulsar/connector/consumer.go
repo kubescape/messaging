@@ -11,9 +11,9 @@ import (
 
 type Consumer interface {
 	pulsar.Consumer
-	//SafeReconsumeLater returns false if the message is not Reconsumable (next delivery to dlq)
-	// or true if the message was sent for reconsuming
-	SafeReconsumeLater(msg pulsar.Message, delay time.Duration) bool
+	//ReconsumeLaterDLQSafe returns false if the message is not Reconsumable (i.e. out of redeliveries or out of time. next attempt will go to dlq)
+	//If the message was sent for reconsuming the return value is true
+	ReconsumeLaterDLQSafe(msg pulsar.Message, delay time.Duration) bool
 	//IsReconsumable returns true if the message can be reconsumed or false if next attempt will go to dlq
 	IsReconsumable(msg pulsar.Message) bool
 }
@@ -21,20 +21,19 @@ type Consumer interface {
 type consumer struct {
 	pulsar.Consumer
 	options createConsumerOptions
-	//TODO override Receive Ack Nack for OTL
 }
 
 const (
-	propertyRetryStartTime          = "RETRY_START_TIME"
-	propertyActualReconsumeAttempts = "ACTUAL_RECONSUME_ATTEMPS"
+	propertyRetryStartTime         = "RETRY_START_TIME"
+	propertySavedReconsumeAttempts = "SAVED_RECONSUME_ATTEMPS"
 )
 
 func (c consumer) ReconsumeLater(msg pulsar.Message, delay time.Duration) {
 	if !c.options.retryEnabled {
-		panic("reconsumeLater called on consumer without retry enabled")
+		panic("reconsumeLater called on consumer without retry enabled option set to true")
 	}
-	if c.options.safeRetry {
-		panic("reconsumeLater called when only safe retry option is true SafeReconsumeLater should be used")
+	if c.options.forceDLQSafeRetry {
+		panic("reconsumeLater: when forceDLQSafeRetry option is true ReconsumeLaterDLQSafe must be used")
 	}
 	c.applyReconsumeDurationProperties(msg)
 	c.Consumer.ReconsumeLater(msg, delay)
@@ -55,7 +54,7 @@ func (c consumer) IsReconsumable(msg pulsar.Message) bool {
 	return reconsumeTimes <= int(c.options.MaxDeliveryAttempts)
 }
 
-func (c consumer) SafeReconsumeLater(msg pulsar.Message, delay time.Duration) bool {
+func (c consumer) ReconsumeLaterDLQSafe(msg pulsar.Message, delay time.Duration) bool {
 	if !c.IsReconsumable(msg) {
 		return false
 	}
@@ -80,15 +79,27 @@ func (c *consumer) applyReconsumeDurationProperties(msg pulsar.Message) {
 		if s, ok := msg.Properties()[pulsar.SysPropertyReconsumeTimes]; ok {
 			reconsumeTimes, _ = strconv.Atoi(s)
 			reconsumeTimes++
+
+		}
+		//get actual retries
+		actualRetries := 0
+		if s, ok := msg.Properties()[propertySavedReconsumeAttempts]; ok {
+			actualRetries, _ = strconv.Atoi(s)
 		}
 		//if next delivery is about to exceed max deliveries (and nack) and the duration has not passed yet
 		if reconsumeTimes > int(c.options.MaxDeliveryAttempts) && time.Since(startTime) < c.options.retryDuration {
-			//reset the delivery count and save it in the actual attempts property
-			msg.Properties()[propertyActualReconsumeAttempts] = msg.Properties()[pulsar.SysPropertyReconsumeTimes]
+			//reset the reconsume times to 1
 			msg.Properties()[pulsar.SysPropertyReconsumeTimes] = "1"
+			//reduce the actual retries by 1
+			actualRetries--
+			//add the retry count the saved attempts property
+			msg.Properties()[propertySavedReconsumeAttempts] = strconv.Itoa(actualRetries + reconsumeTimes - 1) //reduce one becuase it was not reconsumed yet
+			//reset the reconsume times to 1
+			msg.Properties()[pulsar.SysPropertyReconsumeTimes] = "1"
+
 		} else if reconsumeTimes <= int(c.options.MaxDeliveryAttempts) && time.Since(startTime) >= c.options.retryDuration {
 			//duration passed set the retry to MaxDeliveryAttempts
-			msg.Properties()[propertyActualReconsumeAttempts] = msg.Properties()[pulsar.SysPropertyReconsumeTimes]
+			msg.Properties()[propertySavedReconsumeAttempts] = strconv.Itoa(actualRetries + reconsumeTimes)
 			msg.Properties()[pulsar.SysPropertyReconsumeTimes] = strconv.Itoa(int(c.options.MaxDeliveryAttempts))
 		}
 	}
@@ -110,9 +121,9 @@ type createConsumerOptions struct {
 	retryEnabled bool
 	//duration of retry (overides the max delivery attemps)
 	retryDuration time.Duration
-	//safe retry with no sending to DLQ when set must use SafeReconsumeLater and not ReconsumeLater
-	safeRetry bool
-	//set to <namepace>-retry/<topic>-retry
+	//safe retry with no sending to DLQ when set must use ReconsumeLaterDLQSafe and not ReconsumeLater
+	forceDLQSafeRetry bool
+	//automatically set to <namepace>-retry/<topic>-retry
 	retryTopic string
 }
 
@@ -162,11 +173,11 @@ func WithNamespace(tenant, namespace string) CreateConsumerOption {
 
 type CreateConsumerOption func(*createConsumerOptions)
 
-func WithRetryEnable(enable, safeRertyOnly bool, retryDuration time.Duration) CreateConsumerOption {
+func WithRetryEnable(enable, forceDLQSafeRetry bool, retryDuration time.Duration) CreateConsumerOption {
 	return func(o *createConsumerOptions) {
 		o.retryEnabled = enable
 		o.retryDuration = retryDuration
-		o.safeRetry = safeRertyOnly
+		o.forceDLQSafeRetry = forceDLQSafeRetry
 	}
 }
 

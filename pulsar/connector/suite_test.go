@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"sync"
 
 	"net/http"
@@ -699,7 +700,7 @@ func (suite *MainTestSuite) TestSafeReconsumeLaterWithDuration() {
 	testMsg(msg)
 	//reconsume 20 times
 	for i := 0; i < 20; i++ {
-		sent := consumer.SafeReconsumeLater(msg, time.Millisecond)
+		sent := consumer.ReconsumeLaterDLQSafe(msg, time.Millisecond)
 		if !sent {
 			suite.FailNow("expected to message to be reconsumed got false in meesage num ", i)
 		}
@@ -712,8 +713,11 @@ func (suite *MainTestSuite) TestSafeReconsumeLaterWithDuration() {
 	time.Sleep(time.Millisecond * 2300)
 	suite.False(consumer.IsReconsumable(msg), "expect message not to be reconsumable")
 	//reconsume anyway
-	sent := consumer.SafeReconsumeLater(msg, time.Millisecond*5)
+	sent := consumer.ReconsumeLaterDLQSafe(msg, time.Millisecond*5)
 	suite.False(sent, "expect reconsume to send message")
+	savedRetries, _ := strconv.Atoi(msg.Properties()[propertySavedReconsumeAttempts])
+	retries, _ := strconv.Atoi(msg.Properties()[pulsar.SysPropertyReconsumeTimes])
+	suite.Equal(20, savedRetries+retries, "expected 20 retries")
 	if err := consumer.Ack(msg); err != nil {
 		suite.FailNow(err.Error())
 	}
