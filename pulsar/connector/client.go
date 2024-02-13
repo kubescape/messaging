@@ -20,7 +20,8 @@ const (
 	tenantsPath          = adminPath + "/tenants"
 	namespacesPath       = adminPath + "/namespaces"
 
-	dlqNamespaceSuffix = "-dlqs"
+	dlqNamespaceSuffix   = "-dlqs"
+	retryNamespaceSuffix = "-retry"
 )
 
 type PulsarClientOptions struct {
@@ -130,6 +131,11 @@ func NewClient(options ...func(*PulsarClientOptions)) (Client, error) {
 		log.Printf("creating dlq namespace %s\n", dlqNamespacePath)
 		if initErr = pulsarAdminRequest(http.MethodPut, dlqNamespacePath, nil); initErr != nil {
 			return nil, fmt.Errorf("failed to create dlq namespace: %w", initErr)
+		}
+		retryNamespacePath := namespacePath + retryNamespaceSuffix
+		log.Printf("creating retry namespace %s\n", retryNamespacePath)
+		if initErr = pulsarAdminRequest(http.MethodPut, retryNamespacePath, nil); initErr != nil {
+			return nil, fmt.Errorf("failed to create retry namespace: %w", initErr)
 		}
 	}
 	return pulsarClient, nil

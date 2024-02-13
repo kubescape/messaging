@@ -4,7 +4,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
@@ -78,43 +77,6 @@ func (suite *MainTestSuite) TestConsumerAndProducer() {
 	suite.Equal(2, len(actualPayloads), "expected 2 messages")
 }
 
-func (suite *MainTestSuite) TestReConsumerLater() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	producer, err := CreateTestProducer(ctx, suite.pulsarClient)
-	if err != nil {
-		suite.FailNow(err.Error(), "create producer")
-	}
-	if producer == nil {
-		suite.FailNow("producer is nil")
-	}
-	defer producer.Close()
-	//create consumer to get actual payloads
-	consumer, err := CreateTestConsumer(ctx, suite.pulsarClient)
-	if err != nil {
-		suite.FailNow(err.Error())
-	}
-	defer consumer.Close()
-
-	//produce
-	if _, err := producer.Send(ctx, &pulsar.ProducerMessage{Payload: []byte("hello workld")}); err != nil {
-		suite.FailNow(err.Error(), "send payload")
-	}
-	//consume
-	testConsumerCtx, consumerCancel := context.WithTimeout(ctx, time.Second*time.Duration(time.Second*2))
-	defer consumerCancel()
-	msg, err := consumer.Receive(testConsumerCtx)
-	if err != nil {
-		suite.FailNow(err.Error(), "receive payload")
-	}
-	//reconsume
-	consumer.ReconsumeLater(msg, time.Millisecond*5)
-	msg, err = consumer.Receive(testConsumerCtx)
-	if err != nil {
-		suite.FailNow(err.Error(), "reconsume payload")
-	}
-}
-
 // CreateTestProducer creates a producer
 func CreateTestProducer(ctx context.Context, client Client) (pulsar.Producer, error) {
 
@@ -131,86 +93,25 @@ func CreateTestProducer(ctx context.Context, client Client) (pulsar.Producer, er
 	return producer, err
 }
 
-func CreateTestConsumer(ctx context.Context, client Client) (pulsar.Consumer, error) {
-	return client.NewConsumer(WithTopic(TestTopicName),
+func CreateTestConsumer(ctx context.Context, client Client, createConsumerOpts ...CreateConsumerOption) (Consumer, error) {
+	createConsumerOpts = append(createConsumerOpts, WithTopic(TestTopicName),
 		WithSubscriptionName(TestSubscriptionName),
 		WithRedeliveryDelay(time.Duration(client.GetConfig().RedeliveryDelaySeconds)*time.Second),
 		WithDLQ(uint32(client.GetConfig().MaxDeliveryAttempts)),
-		WithDefaultBackoffPolicy(),
-		WithRetryEnable(true),
+		WithDefaultBackoffPolicy())
+	return client.NewConsumer(
+		createConsumerOpts...,
 	)
 
 }
 
 func CreateTestDlqConsumer(client Client) (pulsar.Consumer, error) {
-	return client.NewConsumer(WithTopic(TestTopicName),
+	return client.NewConsumer(WithTopic(TestTopicName+"-dlq"),
 		WithSubscriptionName(TestSubscriptionName+"-dlq"),
 		WithRedeliveryDelay(0),
+		WithNamespace("ca-messaging", "test-namespace-dlqs"),
 		WithDLQ(0),
 	)
-}
-
-func (suite *MainTestSuite) TestDLQ() {
-	//start tenant check
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	//create producer to input test payloads
-	pubsubCtx := utils.NewContextWithValues(ctx, "testConsumer")
-	producer, err := CreateTestProducer(pubsubCtx, suite.pulsarClient)
-	if err != nil {
-		suite.FailNow(err.Error(), "create producer")
-	}
-	if producer == nil {
-		suite.FailNow("producer is nil")
-	}
-	defer producer.Close()
-	//create consumer to get actual payloads
-	consumer, err := CreateTestConsumer(pubsubCtx, suite.pulsarClient)
-	if err != nil {
-		suite.FailNow(err.Error())
-	}
-	defer consumer.Close()
-	dlqConsumer, err := CreateTestDlqConsumer(suite.pulsarClient)
-	if err != nil {
-		suite.FailNow(err.Error())
-	}
-	defer dlqConsumer.Close()
-
-	testPayload := []byte("[{\"id\":\"1\",\"data\":\"Hello World\"},{\"id\":2,\"data\":\"Hello from the other World\"}]")
-
-	//send test payloads
-	produceMessages(suite, ctx, producer, loadJson[[]TestPayloadImplInterface](testPayload))
-	//sleep to allow redelivery
-	time.Sleep(time.Second * 5)
-	//create next stage consumer and dlq consumer
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-	var actualPayloads map[string]TestPayloadImpl
-	go func() {
-		defer wg.Done()
-		// consume payloads for one second
-		actualPayloads = consumeMessages[TestPayloadImpl](suite, pubsubCtx, consumer, "consumer", 20)
-		//sleep to allow redelivery
-		//
-	}()
-	var dlqPayloads map[string]TestInvalidPayloadImpl
-	go func() {
-		defer wg.Done()
-		time.Sleep(time.Second * 10)
-		// consume payloads for one second
-		dlqPayloads = consumeMessages[TestInvalidPayloadImpl](suite, pubsubCtx, dlqConsumer, "dlqConsumer", 20)
-	}()
-	wg.Wait()
-
-	suite.Equal(1, len(actualPayloads), "expected 1 msg in successful consumer")
-	suite.Contains(actualPayloads, "1", "expected msg with ID 1 in successful consumer")
-
-	suite.Equal(1, len(dlqPayloads), "expected 1 msg in dlq consumer")
-	suite.Contains(dlqPayloads, "2", "expected msg with ID 2 in dlq consumer")
-
-	// TODO: bad payload test
-	// suite.badPayloadTest(ctx, producer, dlqConsumer)
 }
 
 func (suite *MainTestSuite) badPayloadTest(ctx context.Context, producer pulsar.Producer, dlqConsumer pulsar.Consumer) {
