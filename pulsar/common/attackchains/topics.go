@@ -2,12 +2,9 @@ package attackchains
 
 const (
 	// topic names
-	AttackChainStateScanStateTopic   = "attack-chain-scan-state-v1"
-	AttackChainStateViewedTopic      = "attack-chain-viewed-v1"
-	AttackChainStateDeleteTopic      = "attack-chain-delete-v1"
-	KubescapeScanReportFinishedTopic = "kubescape-scan-report-finished-v1"
-	ContainerScanReportFinishedTopic = "container-scan-report-finished-v1"
-	AttackChainScanReportFinishTopic = "attack-chain-scan-report-finished-v1"
+	AttackChainStateScanStateTopic = "attack-chain-scan-state-v1"
+	AttackChainStateViewedTopic    = "attack-chain-viewed-v1"
+	AttackChainStateDeleteTopic    = "attack-chain-delete-v1"
 )
 
 // --------- Ingesters structs and consts -------------
@@ -17,9 +14,3 @@ const (
 
 // attack-chain-scan-state-v1/action/update
 // attack-chain-viewed-v1/action/update
-
-const (
-	MsgPropAction            = "action"
-	MsgPropActionValueUpdate = "update"
-	NsgPropActionValueDelete = "delete"
-)
