@@ -11,4 +11,5 @@ const (
 	ContainerScanReportFinishedTopic = "container-scan-report-finished-v1"
 	AttackChainScanReportFinishTopic = "attack-chain-scan-report-finished-v1"
 	SynchronizerFinishTopic          = "synchronizer-finished-v1"
+	UserInputFinishTopic             = "user-input-finished-v1"
 )
