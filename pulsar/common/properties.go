@@ -12,5 +12,8 @@ package common
 const (
 	MsgPropAction            = "action"
 	MsgPropActionValueUpdate = "update"
-	NsgPropActionValueDelete = "delete"
+	MsgPropActionValueDelete = "delete"
+
+	MsgPropAccount = "account"
+	MsgPropCluster = "cluster"
 )
