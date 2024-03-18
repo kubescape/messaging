@@ -1,6 +1,6 @@
 module github.com/kubescape/messaging
 
-go 1.18
+go 1.21.1
 
 require (
 	github.com/apache/pulsar-client-go v0.12.0
