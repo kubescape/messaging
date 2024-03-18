@@ -12,4 +12,10 @@ const (
 	AttackChainScanReportFinishTopic = "attack-chain-scan-report-finished-v1"
 	SynchronizerFinishTopic          = "synchronizer-finished-v1"
 	UserInputFinishTopic             = "user-input-finished-v1"
+	PostureOnFinishPulsarTopic       = "kubescape-scan-report-finished-v1"
+	SecurityRisksOnFinishPulsarTopic = "security-risks-scan-report-finished-v1"
+
+	SecurityRisksOnFinishSubscriptionName = "uns-securityrisks-scan-report-finished"
+
+	CheckTenantConsumerNameTopic string = "check-tenant-consumer"
 )
