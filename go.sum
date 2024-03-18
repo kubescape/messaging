@@ -59,8 +59,8 @@ github.com/apache/pulsar-client-go v0.12.0/go.mod h1:dkutuH4oS2pXiGm+Ti7fQZ4MRjr
 github.com/ardielle/ardielle-go v1.5.2 h1:TilHTpHIQJ27R1Tl/iITBzMwiUGSlVfiVhwDNGM3Zj4=
 github.com/ardielle/ardielle-go v1.5.2/go.mod h1:I4hy1n795cUhaVt/ojz83SNVCYIGsAFAONtv2Dr7HUI=
 github.com/ardielle/ardielle-tools v1.5.4/go.mod h1:oZN+JRMnqGiIhrzkRN9l26Cej9dEx4jeNG6A+AdkShk=
-github.com/armosec/armoapi-go v0.0.352 h1:PBqRcq2PTIsh4z2aCq1p775AIUExbMYiVDYG2E+j7Wo=
-github.com/armosec/armoapi-go v0.0.352/go.mod h1:THr0weLNkxJvZPgwk2GSCtGWw4ERGDYo81g9MqHOUwk=
+github.com/armosec/armoapi-go v0.0.353 h1:L1LIlrV11LXZe3hj2EGWCQw0fYK5Xonxdp2J+4QAVyI=
+github.com/armosec/armoapi-go v0.0.353/go.mod h1:THr0weLNkxJvZPgwk2GSCtGWw4ERGDYo81g9MqHOUwk=
 github.com/armosec/gojay v1.2.15 h1:sSB2vnAvacUNkw9nzUYZKcPzhJOyk6/5LK2JCNdmoZY=
 github.com/armosec/gojay v1.2.15/go.mod h1:vzVAaay2TWJAngOpxu8aqLbye9jMgoKleuAOK+xsOts=
 github.com/armosec/utils-k8s-go v0.0.26 h1:gVSV1mrALyphaesc+JXbx9SfbxLqfgg1KvvC1/0Hfkk=

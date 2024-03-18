@@ -19,7 +19,7 @@ type AggregatedSecurityIssues struct {
 	SecurityRiskName     string                         `json:"securityRiskName"`
 	SecurityRiskCategory string                         `json:"securityRiskCategory"`
 	SecurityRiskSeverity string                         `json:"securityRiskSeverity"`
-	Designators          []identifiers.PortalDesignator `json:"designators"`
+	Resources            []identifiers.PortalDesignator `json:"designators"`
 }
 
 func (si *SecurityRisksIngestionFinishedIngesterMessage) GetLoggerFields() []zap.Field {
