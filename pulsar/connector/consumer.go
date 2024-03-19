@@ -108,6 +108,7 @@ func (c *consumer) applyReconsumeDurationProperties(msg pulsar.Message) {
 type createConsumerOptions struct {
 	Topic                TopicName
 	Topics               []TopicName
+	FullTopics           []TopicName
 	SubscriptionName     string
 	MaxDeliveryAttempts  uint32
 	dlqNamespace         string
@@ -146,11 +147,14 @@ func (opt *createConsumerOptions) defaults(config config.PulsarConfig) {
 }
 
 func (opt *createConsumerOptions) validate() error {
-	if opt.Topic == "" && len(opt.Topics) == 0 {
+	if opt.Topic == "" && len(opt.Topics) == 0 && len(opt.FullTopics) == 0 {
 		return fmt.Errorf("topic or topics must be specified")
 	}
 	if opt.Topic != "" && len(opt.Topics) != 0 {
 		return fmt.Errorf("cannot specify both topic and topics")
+	}
+	if opt.Topic != "" && len(opt.FullTopics) != 0 {
+		return fmt.Errorf("cannot specify both topic and fullTopics")
 	}
 	if opt.SubscriptionName == "" {
 		return fmt.Errorf("subscription name must be specified")
@@ -219,6 +223,12 @@ func WithTopics(topics []TopicName) CreateConsumerOption {
 	}
 }
 
+func WithFullTopics(topics []TopicName) CreateConsumerOption {
+	return func(o *createConsumerOptions) {
+		o.FullTopics = topics
+	}
+}
+
 func WithSubscriptionName(subscriptionName string) CreateConsumerOption {
 	return func(o *createConsumerOptions) {
 		o.SubscriptionName = subscriptionName
@@ -242,13 +252,17 @@ func newSharedConsumer(pulsarClient Client, createConsumerOpts ...CreateConsumer
 	}
 
 	var topic string
-	var topics []string
+	topics := make([]string, 0, len(opts.Topics)+len(opts.FullTopics))
+
 	if opts.Topic != "" {
 		topic = BuildPersistentTopic(opts.Tenant, opts.Namespace, opts.Topic)
 	} else {
-		topics = make([]string, len(opts.Topics))
-		for i, t := range opts.Topics {
-			topics[i] = BuildPersistentTopic(opts.Tenant, opts.Namespace, t)
+		for _, topic := range opts.Topics {
+			persistentTopic := BuildPersistentTopic(opts.Tenant, opts.Namespace, topic)
+			topics = append(topics, persistentTopic)
+		}
+		for _, fullTopic := range opts.FullTopics {
+			topics = append(topics, string(fullTopic))
 		}
 	}
 	var dlq *pulsar.DLQPolicy
