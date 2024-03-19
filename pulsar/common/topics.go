@@ -15,7 +15,7 @@ const (
 	PostureOnFinishPulsarTopic       = "kubescape-scan-report-finished-v1"
 	SecurityRisksOnFinishPulsarTopic = "security-risks-scan-report-finished-v1"
 
-	SecurityRisksOnFinishSubscriptionName = "uns-securityrisks-scan-report-finished"
+	UNSOnFinishSubscriptionName = "uns-report-finished"
 
 	CheckTenantConsumerNameTopic string = "check-tenant-consumer"
 )
