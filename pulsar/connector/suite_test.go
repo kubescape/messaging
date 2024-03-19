@@ -162,6 +162,16 @@ func (suite *MainTestSuite) TestCreateConsumer() {
 	defer consumer.Close()
 }
 
+func (suite *MainTestSuite) TestCreateConsumerWithFullTopics() {
+	chan1 := make(chan pulsar.ConsumerMessage)
+
+	consumer, err := suite.pulsarClient.NewConsumer(WithMessageChannel(chan1), WithFullTopics([]TopicName{"persistent://test-t/test-ns/test-topic"}), WithSubscriptionName("test-subscription"))
+	if err != nil {
+		suite.FailNow("failed to create consumer", err.Error())
+	}
+	defer consumer.Close()
+}
+
 func (suite *MainTestSuite) TestCreateProducer() {
 	//create producer
 	producer, err := suite.pulsarClient.NewProducer(WithProducerTopic("test-topic"))
