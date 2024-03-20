@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type SecurityRisksIngestionFinishedIngesterMessage struct {
+type SecurityRisksIngesterOnFinishedMessage struct {
 	ReportTime             time.Time                  `json:"reportTime"`
 	SendTime               time.Time                  `json:"sendTime"`
 	CustomerGUID           string                     `json:"customerGUID"`
@@ -22,7 +22,7 @@ type AggregatedSecurityIssues struct {
 	Resources            []identifiers.PortalDesignator `json:"resources"`
 }
 
-func (si *SecurityRisksIngestionFinishedIngesterMessage) GetLoggerFields() []zap.Field {
+func (si *SecurityRisksIngesterOnFinishedMessage) GetLoggerFields() []zap.Field {
 	fields := []zap.Field{
 		zap.String("customerGUID", si.CustomerGUID),
 	}
