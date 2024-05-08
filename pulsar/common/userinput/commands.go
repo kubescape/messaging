@@ -26,4 +26,5 @@ const (
 	UserInputCommandUpdateExceptionSecurityRisk                  = UserInputCommand("update-exception-security-risk")
 	UserInputCommandMarkForDeletionExceptionSecurityRisk         = UserInputCommand("mark-for-deletion-exception-security-risk")
 	UserInputCommandMarkForDeletionKubernetesResourceRelatedData = UserInputCommand("mark-for-deletion-kubernetes-resource-related-data")
+	UserInputCommandUpdateRunTimeIncident                        = UserInputCommand("update-run-time-incident")
 )
