@@ -18,4 +18,6 @@ const (
 	UNSOnFinishSubscriptionName = "uns-report-finished"
 
 	CheckTenantConsumerNameTopic string = "check-tenant-consumer"
+
+	NodeProfileTopic = "node-profile-v1"
 )
