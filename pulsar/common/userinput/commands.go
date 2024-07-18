@@ -12,19 +12,28 @@ const (
 )
 
 const (
-	UserInputCommandDeleteCluster                                = UserInputCommand("delete-cluster")
-	UserInputCommandDeleteAllCustomerData                        = UserInputCommand("delete-all-customer-data")
-	UserInputCommandMarkForDeletionRegistryScan                  = UserInputCommand("mark-for-deletion-registry-scan")
-	UserInputCommandStoreContainerScanningSummaryStub            = UserInputCommand("store-container-scanning-summary-stub")
-	UserInputCommandMarkForDeletionKubernetesResources           = UserInputCommand("mark-for-deletion-kubernetes-resources")
-	UserInputCommandMarkForDeletionContainerScanSummary          = UserInputCommand("mark-for-deletion-container-scan-summary")
-	UserInputCommandMarkForDeletionClusterPostureReport          = UserInputCommand("mark-for-deletion-cluster-posture-report")
-	UserInputCommandMarkForDeletionRepositoryPostureReport       = UserInputCommand("mark-for-deletion-repository-posture-report")
-	UserInputCommandMarkForDeletionRegistryScanVulnerabilities   = UserInputCommand("mark-for-deletion-registry-scan-vulnerabilities")
-	UserInputCommandMarkForDeletionContainerScanVulnerabilities  = UserInputCommand("mark-for-deletion-container-scan-vulnerabilities")
+	UserInputCommandDeleteCluster         = UserInputCommand("delete-cluster")
+	UserInputCommandDeleteAllCustomerData = UserInputCommand("delete-all-customer-data")
+	// vulnerability scans actions
+	UserInputCommandMarkForDeletionRegistryScan                 = UserInputCommand("mark-for-deletion-registry-scan")
+	UserInputCommandStoreContainerScanningSummaryStub           = UserInputCommand("store-container-scanning-summary-stub")
+	UserInputCommandMarkForDeletionKubernetesResources          = UserInputCommand("mark-for-deletion-kubernetes-resources")
+	UserInputCommandMarkForDeletionContainerScanSummary         = UserInputCommand("mark-for-deletion-container-scan-summary")
+	UserInputCommandMarkForDeletionRegistryScanVulnerabilities  = UserInputCommand("mark-for-deletion-registry-scan-vulnerabilities")
+	UserInputCommandMarkForDeletionContainerScanVulnerabilities = UserInputCommand("mark-for-deletion-container-scan-vulnerabilities")
+	// PostureReport actions
+	UserInputCommandMarkForDeletionClusterPostureReport    = UserInputCommand("mark-for-deletion-cluster-posture-report")
+	UserInputCommandMarkForDeletionRepositoryPostureReport = UserInputCommand("mark-for-deletion-repository-posture-report")
+	// SecurityRisk actions
 	UserInputCommandStoreExceptionSecurityRisk                   = UserInputCommand("store-exception-security-risk")
 	UserInputCommandUpdateExceptionSecurityRisk                  = UserInputCommand("update-exception-security-risk")
 	UserInputCommandMarkForDeletionExceptionSecurityRisk         = UserInputCommand("mark-for-deletion-exception-security-risk")
 	UserInputCommandMarkForDeletionKubernetesResourceRelatedData = UserInputCommand("mark-for-deletion-kubernetes-resource-related-data")
-	UserInputCommandUpdateRunTimeIncident                        = UserInputCommand("update-run-time-incident")
+	// RuntimeIncident actions
+	UserInputCommandUpdateRunTimeIncident = UserInputCommand("update-run-time-incident")
+	UserInputCommandDeleteRunTimeIncident = UserInputCommand("delete-run-time-incident") // for backoffice
+	// RuntimeIncidentPolicy mutating actions
+	UserInputCommandDeleteRuntimeIncidentPolicy = UserInputCommand("delete-runtime-incident-policy")
+	UserInputCommandUpdateRuntimeIncidentPolicy = UserInputCommand("update-runtime-incident-policy")
+	UserInputCommandCreateRuntimeIncidentPolicy = UserInputCommand("create-runtime-incident-policy")
 )
