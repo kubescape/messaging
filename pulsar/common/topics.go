@@ -15,6 +15,7 @@ const (
 	PostureOnFinishPulsarTopic         = "kubescape-scan-report-finished-v1"
 	SecurityRisksOnFinishPulsarTopic   = "security-risks-scan-report-finished-v1"
 	UIViewsIngesterOnFinishPulsarTopic = "ui-views-finished-v1"
+	RuntimeIncidentOnFinishPulsarTopic = "runtime-incident-finished-v1"
 
 	UNSOnFinishSubscriptionName = "uns-report-finished"
 
