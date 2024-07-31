@@ -36,4 +36,7 @@ const (
 	UserInputCommandDeleteRuntimeIncidentPolicy = UserInputCommand("delete-runtime-incident-policy")
 	UserInputCommandUpdateRuntimeIncidentPolicy = UserInputCommand("update-runtime-incident-policy")
 	UserInputCommandCreateRuntimeIncidentPolicy = UserInputCommand("create-runtime-incident-policy")
+	UserInputCommandCreateIgnoreRule            = UserInputCommand("create-ignore-rule")
+	UserInputCommandUpdateIgnoreRule            = UserInputCommand("update-ignore-rule")
+	UserInputCommandDeleteIgnoreRule            = UserInputCommand("delete-ignore-rule")
 )
