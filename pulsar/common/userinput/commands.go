@@ -14,6 +14,7 @@ const (
 const (
 	UserInputCommandDeleteCluster         = UserInputCommand("delete-cluster")
 	UserInputCommandDeleteAllCustomerData = UserInputCommand("delete-all-customer-data")
+	UserInputCommandCreateCustomerData    = UserInputCommand("create-customer-data")
 	// vulnerability scans actions
 	UserInputCommandMarkForDeletionRegistryScan                 = UserInputCommand("mark-for-deletion-registry-scan")
 	UserInputCommandStoreContainerScanningSummaryStub           = UserInputCommand("store-container-scanning-summary-stub")
