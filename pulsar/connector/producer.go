@@ -92,6 +92,7 @@ type produceMessageOptions struct {
 	pulsarClient Client
 	ctx          context.Context
 	properties   map[string]string
+	key          string
 }
 
 type ProduceMessageOption func(*produceMessageOptions)
@@ -105,6 +106,12 @@ func WithContext(ctx context.Context) ProduceMessageOption {
 func WithMessageToSend(msgToSend interface{}) ProduceMessageOption {
 	return func(o *produceMessageOptions) {
 		o.msgToSend = msgToSend
+	}
+}
+
+func WithMessageKey(key string) ProduceMessageOption {
+	return func(o *produceMessageOptions) {
+		o.key = key
 	}
 }
 
@@ -133,6 +140,7 @@ func ProduceMessage(producer pulsar.Producer, producerOpts ...ProduceMessageOpti
 	msg := pulsar.ProducerMessage{
 		Payload:    msgBytes,
 		Properties: opts.properties,
+		Key:        opts.key,
 	}
 
 	if err != nil {
