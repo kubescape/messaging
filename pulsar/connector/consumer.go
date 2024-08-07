@@ -110,6 +110,7 @@ type createConsumerOptions struct {
 	Topics               []TopicName
 	FullTopics           []TopicName
 	SubscriptionName     string
+	subscriptionType     *pulsar.SubscriptionType
 	MaxDeliveryAttempts  uint32
 	dlqNamespace         string
 	RedeliveryDelay      time.Duration
@@ -203,6 +204,12 @@ func WithDefaultBackoffPolicy() CreateConsumerOption {
 	}
 }
 
+func WithSubscriptionType(subscriptionType pulsar.SubscriptionType) CreateConsumerOption {
+	return func(o *createConsumerOptions) {
+		o.subscriptionType = &subscriptionType
+	}
+}
+
 // maxDeliveryAttempts before sending to DLQ - 0 means no DLQ
 // by default, maxDeliveryAttempts is 5
 func WithDLQ(maxDeliveryAttempts uint32) CreateConsumerOption {
@@ -241,7 +248,7 @@ func WithMessageChannel(messageChannel chan pulsar.ConsumerMessage) CreateConsum
 	}
 }
 
-func newSharedConsumer(pulsarClient Client, createConsumerOpts ...CreateConsumerOption) (Consumer, error) {
+func newConsumer(pulsarClient Client, createConsumerOpts ...CreateConsumerOption) (Consumer, error) {
 	opts := &createConsumerOptions{}
 	opts.defaults(pulsarClient.GetConfig())
 	for _, o := range createConsumerOpts {
@@ -277,11 +284,20 @@ func newSharedConsumer(pulsarClient Client, createConsumerOpts ...CreateConsumer
 		}
 		dlq = NewDlq(opts.Tenant, opts.dlqNamespace, topicName, opts.MaxDeliveryAttempts, opts.retryTopic)
 	}
+
+	var subscriptionType pulsar.SubscriptionType
+	if opts.subscriptionType != nil {
+		subscriptionType = *opts.subscriptionType
+	} else {
+		// default to shared subscription type if not specified
+		subscriptionType = pulsar.Shared
+	}
+
 	pulsarConsumer, err := pulsarClient.Subscribe(pulsar.ConsumerOptions{
 		Topic:                          topic,
 		Topics:                         topics,
 		SubscriptionName:               opts.SubscriptionName,
-		Type:                           pulsar.Shared,
+		Type:                           subscriptionType,
 		MessageChannel:                 opts.MessageChannel,
 		DLQ:                            dlq,
 		EnableDefaultNackBackoffPolicy: opts.DefaultBackoffPolicy,

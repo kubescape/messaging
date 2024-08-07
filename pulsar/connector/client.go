@@ -51,8 +51,9 @@ func (p *pulsarClient) NewProducer(createProducerOption ...CreateProducerOption)
 	return newProducer(p, createProducerOption...)
 }
 
+// NewConsumer creates a new consumer. When subscription type is not provided, it defaults to Shared
 func (p *pulsarClient) NewConsumer(createConsumerOpts ...CreateConsumerOption) (Consumer, error) {
-	return newSharedConsumer(p, createConsumerOpts...)
+	return newConsumer(p, createConsumerOpts...)
 }
 
 func (p *pulsarClient) ping() error {
