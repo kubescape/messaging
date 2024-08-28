@@ -40,4 +40,6 @@ const (
 	UserInputCommandCreateIgnoreRule            = UserInputCommand("create-ignore-rule")
 	UserInputCommandUpdateIgnoreRule            = UserInputCommand("update-ignore-rule")
 	UserInputCommandDeleteIgnoreRule            = UserInputCommand("delete-ignore-rule")
+	//ApplicationProfile actions
+	UserInputCommandAddToApplicationProfile = UserInputCommand("add-to-application-profile")
 )
