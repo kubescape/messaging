@@ -4,9 +4,8 @@ type RuntimeIncidentCommand string
 
 const (
 	// msgKeys
-	CommandKey			= "command"
+	CommandKey = "command"
 )
-
 
 const (
 	// runtime incident actions
