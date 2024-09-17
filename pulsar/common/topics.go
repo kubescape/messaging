@@ -22,4 +22,7 @@ const (
 	CheckTenantConsumerNameTopic string = "check-tenant-consumer"
 
 	NodeProfileTopic = "node-profile-v1"
+
+	CloudScannerOnFinishTopic   = "cloud-scanner-cloud-findings-finished-v1"
+	CloudSchedulerOnFinishTopic = "cloud-scheduler-scan-tasks-finished-v1"
 )
