@@ -106,6 +106,7 @@ func (c *consumer) applyReconsumeDurationProperties(msg pulsar.Message) {
 }
 
 type createConsumerOptions struct {
+	consumerName         string
 	Topic                TopicName
 	Topics               []TopicName
 	FullTopics           []TopicName
@@ -248,6 +249,12 @@ func WithMessageChannel(messageChannel chan pulsar.ConsumerMessage) CreateConsum
 	}
 }
 
+func WithName(name string) CreateConsumerOption {
+	return func(o *createConsumerOptions) {
+		o.consumerName = name
+	}
+}
+
 func newConsumer(pulsarClient Client, createConsumerOpts ...CreateConsumerOption) (Consumer, error) {
 	opts := &createConsumerOptions{}
 	opts.defaults(pulsarClient.GetConfig())
@@ -294,6 +301,7 @@ func newConsumer(pulsarClient Client, createConsumerOpts ...CreateConsumerOption
 	}
 
 	pulsarConsumer, err := pulsarClient.Subscribe(pulsar.ConsumerOptions{
+		Name:                           opts.consumerName,
 		Topic:                          topic,
 		Topics:                         topics,
 		SubscriptionName:               opts.SubscriptionName,
