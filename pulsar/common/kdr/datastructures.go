@@ -20,7 +20,7 @@ type RuntimeIncidentIngesterOnFinishedMessage struct {
 	IncidentName        string                       `json:"incidentName"` // incidentType.Name - ThreatName
 	Severity            string                       `json:"severity"`
 	Resource            identifiers.PortalDesignator `json:"resource"` // Pod, Node, Workload, Namespace, Cluster, etc.
-	ResponseTriggered   bool                         `json:"responseTriggered,omitempty"`
+	ResponseUpdated     bool                         `json:"responseUpdated,omitempty"`
 }
 
 func (si *RuntimeIncidentIngesterOnFinishedMessage) GetLoggerFields() []zap.Field {
