@@ -7,6 +7,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	RuntimeIncidentIngesterOnFinishedMessageTypeProp = "RuntimeIncidentIngesterOnFinishedMessage"
+)
+
 type RuntimeIncidentIngesterOnFinishedMessage struct {
 	ReportTime          time.Time                    `json:"reportTime"`
 	SendTime            time.Time                    `json:"sendTime"`
@@ -16,6 +20,7 @@ type RuntimeIncidentIngesterOnFinishedMessage struct {
 	IncidentName        string                       `json:"incidentName"` // incidentType.Name - ThreatName
 	Severity            string                       `json:"severity"`
 	Resource            identifiers.PortalDesignator `json:"resource"` // Pod, Node, Workload, Namespace, Cluster, etc.
+	ResponseUpdated     bool                         `json:"responseUpdated,omitempty"`
 }
 
 func (si *RuntimeIncidentIngesterOnFinishedMessage) GetLoggerFields() []zap.Field {
