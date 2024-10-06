@@ -46,4 +46,8 @@ const (
 	UserInputCommandDeleteWorkflow = UserInputCommand("delete-workflow")
 	UserInputCommandUpdateWorkflow = UserInputCommand("update-workflow")
 	UserInputCommandCreateWorkflow = UserInputCommand("create-workflow")
+
+	UserInputCommandDeleteRegistry = UserInputCommand("delete-registry")
+	UserInputCommandUpdateRegistry = UserInputCommand("update-registry")
+	UserInputCommandCreateRegistry = UserInputCommand("create-registry")
 )
