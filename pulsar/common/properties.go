@@ -16,4 +16,6 @@ const (
 
 	MsgPropAccount = "account"
 	MsgPropCluster = "cluster"
+
+	MsgPropMessageType = "messageType"
 )

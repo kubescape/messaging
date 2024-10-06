@@ -7,6 +7,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	RuntimeIncidentIngesterOnFinishedMessageTypeProp = "RuntimeIncidentIngesterOnFinishedMessage"
+)
+
 type RuntimeIncidentIngesterOnFinishedMessage struct {
 	ReportTime          time.Time                    `json:"reportTime"`
 	SendTime            time.Time                    `json:"sendTime"`
