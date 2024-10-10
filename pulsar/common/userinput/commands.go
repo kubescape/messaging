@@ -50,4 +50,8 @@ const (
 	UserInputCommandDeleteRegistry = UserInputCommand("delete-registry")
 	UserInputCommandUpdateRegistry = UserInputCommand("update-registry")
 	UserInputCommandCreateRegistry = UserInputCommand("create-registry")
+
+	UserInputCommandDeleteTeamsChannel = UserInputCommand("delete-teams-channel")
+	UserInputCommandUpdateTeamsChannel = UserInputCommand("update-teams-channel")
+	UserInputCommandCreateTeamsChannel = UserInputCommand("create-teams-channel")
 )
