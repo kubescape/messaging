@@ -42,6 +42,7 @@ const (
 	UserInputCommandDeleteIgnoreRule            = UserInputCommand("delete-ignore-rule")
 	//ApplicationProfile actions
 	UserInputCommandAddToApplicationProfile = UserInputCommand("add-to-application-profile")
+	UserInputCommandDeleteFromApplicationProfile = UserInputCommand("delete-from-application-profile")
 
 	UserInputCommandDeleteWorkflow = UserInputCommand("delete-workflow")
 	UserInputCommandUpdateWorkflow = UserInputCommand("update-workflow")
