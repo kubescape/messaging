@@ -41,7 +41,7 @@ const (
 	UserInputCommandUpdateIgnoreRule            = UserInputCommand("update-ignore-rule")
 	UserInputCommandDeleteIgnoreRule            = UserInputCommand("delete-ignore-rule")
 	//ApplicationProfile actions
-	UserInputCommandAddToApplicationProfile = UserInputCommand("add-to-application-profile")
+	UserInputCommandAddToApplicationProfile      = UserInputCommand("add-to-application-profile")
 	UserInputCommandDeleteFromApplicationProfile = UserInputCommand("delete-from-application-profile")
 
 	UserInputCommandDeleteWorkflow = UserInputCommand("delete-workflow")
@@ -51,6 +51,7 @@ const (
 	UserInputCommandDeleteRegistry = UserInputCommand("delete-registry")
 	UserInputCommandUpdateRegistry = UserInputCommand("update-registry")
 	UserInputCommandCreateRegistry = UserInputCommand("create-registry")
+	UserInputCommandCheckRegistry  = UserInputCommand("check-registry")
 
 	UserInputCommandDeleteTeamsChannel = UserInputCommand("delete-teams-channel")
 	UserInputCommandUpdateTeamsChannel = UserInputCommand("update-teams-channel")
