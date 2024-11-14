@@ -48,10 +48,11 @@ const (
 	UserInputCommandUpdateWorkflow = UserInputCommand("update-workflow")
 	UserInputCommandCreateWorkflow = UserInputCommand("create-workflow")
 
-	UserInputCommandDeleteRegistry = UserInputCommand("delete-registry")
-	UserInputCommandUpdateRegistry = UserInputCommand("update-registry")
-	UserInputCommandCreateRegistry = UserInputCommand("create-registry")
-	UserInputCommandCheckRegistry  = UserInputCommand("check-registry")
+	UserInputCommandDeleteRegistry      = UserInputCommand("delete-registry")
+	UserInputCommandUpdateRegistry      = UserInputCommand("update-registry")
+	UserInputCommandCreateRegistry      = UserInputCommand("create-registry")
+	UserInputCommandCheckRegistry       = UserInputCommand("check-registry")
+	UserInputCommandClearRegistryStatus = UserInputCommand("clear-registry-status")
 
 	UserInputCommandDeleteTeamsChannel = UserInputCommand("delete-teams-channel")
 	UserInputCommandUpdateTeamsChannel = UserInputCommand("update-teams-channel")
