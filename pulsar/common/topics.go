@@ -17,6 +17,7 @@ const (
 	UIViewsIngesterOnFinishPulsarTopic = "ui-views-finished-v1"
 	RuntimeIncidentOnFinishPulsarTopic = "runtime-incident-finished-v1"
 	K8sObjectOnFinishPulsarTopic       = "k8s-objects-finished-v1"
+	ObjectModificationOnFinishTopic    = "object-modification-finished-v1"
 
 	UNSOnFinishSubscriptionName = "uns-report-finished"
 
