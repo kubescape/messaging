@@ -18,7 +18,7 @@ const (
 	MsgPropCluster = "cluster"
 
 	MsgPropMessageType = "messageType"
-	MsgType            = "CDRALERT"
+	MsgType            = "MSGTYPE"
 )
 
 // MsgType for message types
