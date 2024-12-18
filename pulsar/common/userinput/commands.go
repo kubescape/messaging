@@ -57,4 +57,8 @@ const (
 	UserInputCommandDeleteTeamsChannel = UserInputCommand("delete-teams-channel")
 	UserInputCommandUpdateTeamsChannel = UserInputCommand("update-teams-channel")
 	UserInputCommandCreateTeamsChannel = UserInputCommand("create-teams-channel")
+
+	UserInputCommandCreateCloudAccount = UserInputCommand("create-cloud-account")
+	UserInputCommandUpdateCloudAccount = UserInputCommand("update-cloud-account")
+	UserInputCommandDeleteCloudAccount = UserInputCommand("delete-cloud-account")
 )
