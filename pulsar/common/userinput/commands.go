@@ -61,6 +61,7 @@ const (
 	UserInputCommandCreateCloudAccount = UserInputCommand("create-cloud-account")
 	UserInputCommandUpdateCloudAccount = UserInputCommand("update-cloud-account")
 	UserInputCommandDeleteCloudAccount = UserInputCommand("delete-cloud-account")
+	UserInputCommandScanCloudAccount   = UserInputCommand("scan-cloud-account")
 
 	UserInputCommandSendOperatorApiCommand = UserInputCommand("send-operator-api-command")
 )
