@@ -19,6 +19,10 @@ const (
 
 	MsgPropMessageType = "messageType"
 	MsgType            = "MSGTYPE"
+
+	// cloud accounts values
+	MsgPropActionValueFeatureCSPM = "deleteFeatureCspm"
+	MsgPropActionValueFeatureCADR = "deleteFeatureCadr"
 )
 
 // MsgType for message types
