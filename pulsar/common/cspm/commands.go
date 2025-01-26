@@ -34,6 +34,5 @@ type IScanRequest interface {
 
 type ScanNowRequest struct {
 	IScanRequest
-	CustomerGUID     string `json:"customerGUID"`
 	CloudAccountGUID string `json:"cloudAccountGUID"`
 }
