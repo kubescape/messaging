@@ -25,8 +25,9 @@ const (
 
 	NodeProfileTopic = "node-profile-v1"
 
-	CloudScannerOnFinishTopic   = "cloud-scanner-cloud-findings-finished-v1"
-	CloudSchedulerOnFinishTopic = "cloud-scheduler-scan-tasks-finished-v1"
+	CloudScannerOnFinishTopic   = "cloud-scanner-results-v2"
+	CloudSchedulerOnFinishTopic = "cloud-scanner-tasks-v1"
+	CloudSchedulerCommandTopic  = "cloud-scheduler-command-v1"
 
 	RegistryStatusTopic = "registry-status-v1"
 )
