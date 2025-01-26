@@ -13,3 +13,7 @@ var (
 func (c CloudScanCommand) String() string {
 	return string(c)
 }
+
+type ScanNowRequest struct {
+	CloudAccountGUID string `json:"cloudAccountGUID"`
+}
