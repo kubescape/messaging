@@ -35,4 +35,5 @@ type IScanRequest interface {
 type ScanNowRequest struct {
 	IScanRequest
 	CloudAccountGUID string `json:"cloudAccountGUID"`
+	IsFirstScan      bool   `json:"isFirstScan"`
 }
