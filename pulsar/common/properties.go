@@ -28,4 +28,5 @@ const (
 // MsgType for message types
 const (
 	CdrAlert = "CDRALERT"
+	HostAlert = "HOSTALERT"
 )
