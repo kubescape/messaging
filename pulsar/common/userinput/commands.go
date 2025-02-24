@@ -64,4 +64,6 @@ const (
 	UserInputCommandScanCloudAccount   = UserInputCommand("scan-cloud-account")
 
 	UserInputCommandSendOperatorApiCommand = UserInputCommand("send-operator-api-command")
+
+	UserInputCommandNewJiraTicketByUser = UserInputCommand("new-jira-ticket-by-user")
 )
