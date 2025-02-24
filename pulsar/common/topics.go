@@ -30,4 +30,6 @@ const (
 	CloudSchedulerCommandTopic  = "cloud-scheduler-command-v1"
 
 	RegistryStatusTopic = "registry-status-v1"
+
+	NewJiraTicketByUNSTopic = "new-jira-ticket-by-uns-v1"
 )

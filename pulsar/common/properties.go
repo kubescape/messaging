@@ -23,10 +23,13 @@ const (
 	// cloud accounts values
 	MsgPropActionValueFeatureCSPM = "deleteFeatureCspm"
 	MsgPropActionValueFeatureCADR = "deleteFeatureCadr"
+
+	MsgPropActionValueEnrichNewJiraTicketByUNS  = "enrichNewJiraTicketByUNS"
+	MsgPropActionValueEnrichNewJiraTicketByUser = "enrichNewJiraTicketByUser"
 )
 
 // MsgType for message types
 const (
-	CdrAlert = "CDRALERT"
+	CdrAlert  = "CDRALERT"
 	HostAlert = "HOSTALERT"
 )
