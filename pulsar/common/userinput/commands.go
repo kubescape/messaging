@@ -65,5 +65,6 @@ const (
 
 	UserInputCommandSendOperatorApiCommand = UserInputCommand("send-operator-api-command")
 
-	UserInputCommandNewJiraTicketByUser = UserInputCommand("new-jira-ticket-by-user")
+	UserInputCommandNewJiraTicketByUser    = UserInputCommand("new-jira-ticket-by-user")
+	UserInputCommandUnlinkJiraTicketByUser = UserInputCommand("unlink-jira-ticket-by-user")
 )
