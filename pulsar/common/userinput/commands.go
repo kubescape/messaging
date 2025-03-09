@@ -67,4 +67,6 @@ const (
 
 	UserInputCommandNewJiraTicketByUser    = UserInputCommand("new-jira-ticket-by-user")
 	UserInputCommandUnlinkJiraTicketByUser = UserInputCommand("unlink-jira-ticket-by-user")
+
+	UserInputCommandRuntimeIncidentResponse = UserInputCommand("runtime-incident-response")
 )
