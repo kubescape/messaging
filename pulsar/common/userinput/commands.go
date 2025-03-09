@@ -69,4 +69,7 @@ const (
 	UserInputCommandUnlinkJiraTicketByUser = UserInputCommand("unlink-jira-ticket-by-user")
 
 	UserInputCommandRuntimeIncidentResponse = UserInputCommand("runtime-incident-response")
+
+	UserInputCommandApplyNetworkPolicy  = UserInputCommand("apply-network-policy")
+	UserInputCommandApplySeccompProfile = UserInputCommand("apply-seccomp-profile")
 )
