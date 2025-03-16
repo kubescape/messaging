@@ -72,4 +72,8 @@ const (
 
 	UserInputCommandApplyNetworkPolicy  = UserInputCommand("apply-network-policy")
 	UserInputCommandApplySeccompProfile = UserInputCommand("apply-seccomp-profile")
+
+	UserInputCommandDeleteSavedFilter = UserInputCommand("delete-saved-filter")
+	UserInputCommandUpdateSavedFilter = UserInputCommand("update-saved-filter")
+	UserInputCommandCreateSavedFilter = UserInputCommand("create-saved-filter")
 )
