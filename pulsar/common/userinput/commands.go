@@ -76,4 +76,8 @@ const (
 	UserInputCommandDeleteSavedFilter = UserInputCommand("delete-saved-filter")
 	UserInputCommandUpdateSavedFilter = UserInputCommand("update-saved-filter")
 	UserInputCommandCreateSavedFilter = UserInputCommand("create-saved-filter")
+
+	UserInputCommandDeleteWebhook = UserInputCommand("delete-webhook")
+	UserInputCommandUpdateWebhook = UserInputCommand("update-webhook")
+	UserInputCommandCreateWebhook = UserInputCommand("create-webhook")
 )
