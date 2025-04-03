@@ -25,6 +25,8 @@ const (
 
 	NodeProfileTopic = "node-profile-v1"
 
+	NetworkStreamTopic = "network-stream-v1"
+
 	CloudScannerOnFinishTopic   = "cloud-scanner-results-v2"
 	CloudSchedulerOnFinishTopic = "cloud-scanner-tasks-v1"
 	CloudSchedulerCommandTopic  = "cloud-scheduler-command-v1"
