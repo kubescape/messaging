@@ -26,6 +26,8 @@ type ClusterStatusNotification struct {
 	// for degrated
 	AffectedPods  []string `json:"affected_pods,omitempty"`
 	AffectedNodes []string `json:"affected_nodes,omitempty"`
+
+	Link string `json:"link,omitempty"`
 }
 
 func (c *ClusterStatusNotification) SameClusterStatus(status string) bool {
