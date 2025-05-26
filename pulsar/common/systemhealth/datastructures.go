@@ -14,22 +14,22 @@ type ClusterStatusOnFinishedMessage struct {
 }
 
 type ClusterStatusNotification struct {
-	CustomerGUID string `json:"customer_guid,omitempty"`
+	CustomerGUID string `json:"customerGUID,omitempty"`
 
-	CloudMetadata *armotypes.CloudMetadata `json:"cloud_metadata,omitempty"`
+	CloudMetadata *armotypes.CloudMetadata `json:"cloudMetadata,omitempty"`
 
 	// this is populated only if we have cloud metadata and armo account name associated with it.
-	ArmoAccountName string `json:"armo_account_name,omitempty"`
+	ArmoAccountName string `json:"armoAccountName,omitempty"`
 
 	Cluster        string     `json:"cluster,omitempty"`
 	Status         string     `json:"status,omitempty"`
 	Provider       string     `json:"provider,omitempty"`
-	LastKeepAlive  *time.Time `json:"last_keep_alive,omitempty"`
-	ConnectionTime *time.Time `json:"connection_time,omitempty"`
+	LastKeepAlive  *time.Time `json:"lastKeepAlive,omitempty"`
+	ConnectionTime *time.Time `json:"connectionTime,omitempty"`
 
 	// for degrated
-	AffectedPods  []string `json:"affected_pods,omitempty"`
-	AffectedNodes []string `json:"affected_nodes,omitempty"`
+	AffectedPods  []string `json:"affectedPods,omitempty"`
+	AffectedNodes []string `json:"affectedNodes,omitempty"`
 
 	Link string `json:"link,omitempty"`
 }
