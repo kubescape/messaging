@@ -116,6 +116,7 @@ type createConsumerOptions struct {
 	dlqNamespace         string
 	RedeliveryDelay      time.Duration
 	MessageChannel       chan pulsar.ConsumerMessage
+	ReceiverQueueSize    int
 	DefaultBackoffPolicy bool
 	BackoffPolicy        pulsar.NackBackoffPolicy
 	Tenant               string
@@ -249,6 +250,12 @@ func WithMessageChannel(messageChannel chan pulsar.ConsumerMessage) CreateConsum
 	}
 }
 
+func WithQueueSize(queueSize int) CreateConsumerOption {
+	return func(o *createConsumerOptions) {
+		o.ReceiverQueueSize = queueSize
+	}
+}
+
 func WithName(name string) CreateConsumerOption {
 	return func(o *createConsumerOptions) {
 		o.consumerName = name
@@ -300,7 +307,7 @@ func newConsumer(pulsarClient Client, createConsumerOpts ...CreateConsumerOption
 		subscriptionType = pulsar.Shared
 	}
 
-	pulsarConsumer, err := pulsarClient.Subscribe(pulsar.ConsumerOptions{
+	consumerOptions := pulsar.ConsumerOptions{
 		Name:                           opts.consumerName,
 		Topic:                          topic,
 		Topics:                         topics,
@@ -310,10 +317,17 @@ func newConsumer(pulsarClient Client, createConsumerOpts ...CreateConsumerOption
 		DLQ:                            dlq,
 		EnableDefaultNackBackoffPolicy: opts.DefaultBackoffPolicy,
 		RetryEnable:                    opts.retryEnabled,
+		ReceiverQueueSize:              opts.ReceiverQueueSize,
 		//	Interceptors:        tracer.NewConsumerInterceptors(ctx),
 		NackRedeliveryDelay: opts.RedeliveryDelay,
 		NackBackoffPolicy:   opts.BackoffPolicy,
-	})
+	}
+
+	if opts.ReceiverQueueSize > 0 {
+		consumerOptions.ReceiverQueueSize = opts.ReceiverQueueSize
+	}
+
+	pulsarConsumer, err := pulsarClient.Subscribe(consumerOptions)
 	if err != nil {
 		return nil, err
 	}
