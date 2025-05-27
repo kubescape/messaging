@@ -317,7 +317,6 @@ func newConsumer(pulsarClient Client, createConsumerOpts ...CreateConsumerOption
 		DLQ:                            dlq,
 		EnableDefaultNackBackoffPolicy: opts.DefaultBackoffPolicy,
 		RetryEnable:                    opts.retryEnabled,
-		ReceiverQueueSize:              opts.ReceiverQueueSize,
 		//	Interceptors:        tracer.NewConsumerInterceptors(ctx),
 		NackRedeliveryDelay: opts.RedeliveryDelay,
 		NackBackoffPolicy:   opts.BackoffPolicy,
