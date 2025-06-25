@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/armosec/armoapi-go/identifiers"
+	kdr "github.com/armosec/armosec-infra/kdr"
 	"go.uber.org/zap"
 )
 
@@ -16,6 +17,7 @@ type RuntimeIncidentIngesterOnFinishedMessage struct {
 	SendTime            time.Time                    `json:"sendTime"`
 	CustomerGUID        string                       `json:"customerGUID"`
 	IncidentPolicyGUIDs []string                     `json:"incidentPolicyGUIDs"`
+	Policies            []kdr.IncidentPolicy         `json:"policies"`
 	IncidentGUID        string                       `json:"incidentGUID"`
 	IncidentName        string                       `json:"incidentName"` // incidentType.Name - ThreatName
 	Severity            string                       `json:"severity"`
