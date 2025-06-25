@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/armosec/armoapi-go/identifiers"
-	kdr "github.com/armosec/armosec-infra/kdr"
+	"github.com/armosec/armosec-infra/kdr"
 	"go.uber.org/zap"
 )
 
