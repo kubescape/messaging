@@ -58,10 +58,17 @@ const (
 	UserInputCommandUpdateTeamsChannel = UserInputCommand("update-teams-channel")
 	UserInputCommandCreateTeamsChannel = UserInputCommand("create-teams-channel")
 
+	//cloud account actions
 	UserInputCommandCreateCloudAccount = UserInputCommand("create-cloud-account")
 	UserInputCommandUpdateCloudAccount = UserInputCommand("update-cloud-account")
 	UserInputCommandDeleteCloudAccount = UserInputCommand("delete-cloud-account")
 	UserInputCommandScanCloudAccount   = UserInputCommand("scan-cloud-account")
+
+	//aws organization actions
+	UserInputCommandCreateAwsOrganization = UserInputCommand("create-aws-organization")
+	UserInputCommandUpdateAwsOrganization = UserInputCommand("update-aws-organization")
+	UserInputCommandDeleteAwsOrganization = UserInputCommand("delete-aws-organization")
+	UserInputCommandScanAwsOrganization   = UserInputCommand("sync-aws-organization")
 
 	UserInputCommandSendOperatorApiCommand = UserInputCommand("send-operator-api-command")
 
