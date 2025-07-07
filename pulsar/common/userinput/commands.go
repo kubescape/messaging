@@ -65,10 +65,10 @@ const (
 	UserInputCommandScanCloudAccount   = UserInputCommand("scan-cloud-account")
 
 	//aws organization actions
-	UserInputCommandCreateAwsOrganization = UserInputCommand("create-aws-organization")
-	UserInputCommandUpdateAwsOrganization = UserInputCommand("update-aws-organization")
-	UserInputCommandDeleteAwsOrganization = UserInputCommand("delete-aws-organization")
-	UserInputCommandScanAwsOrganization   = UserInputCommand("sync-aws-organization")
+	UserInputCommandCreateOrganization = UserInputCommand("create-organization")
+	UserInputCommandUpdateOrganization = UserInputCommand("update-organization")
+	UserInputCommandDeleteOrganization = UserInputCommand("delete-organization")
+	UserInputCommandScanOrganization   = UserInputCommand("sync-organization")
 
 	UserInputCommandSendOperatorApiCommand = UserInputCommand("send-operator-api-command")
 
