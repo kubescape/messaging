@@ -191,6 +191,45 @@ func (suite *MainTestSuite) TestCreateProducer() {
 	defer producer.Close()
 }
 
+func (suite *MainTestSuite) TestSetAndGetMaxUnackedMessagesOnConsumer() {
+	topic := suite.defaultTestConfig.Tenant + "/" + suite.defaultTestConfig.Namespace + "/cloud-scanner-tasks-v2"
+	fullTopic := "persistent://" + topic
+	subscription := "test-sub"
+
+	fmt.Println("Ensuring topic and subscription exist by creating a consumer")
+	client, err := pulsar.NewClient(pulsar.ClientOptions{
+		URL: suite.defaultTestConfig.URL,
+	})
+	suite.Require().NoError(err)
+	defer client.Close()
+	tempConsumer, err := client.Subscribe(pulsar.ConsumerOptions{
+		Topic:            fullTopic,
+		SubscriptionName: subscription,
+		Type:             pulsar.Shared,
+		Name:             "init-subscription",
+	})
+	suite.Require().NoError(err)
+	tempConsumer.Close()
+
+	fmt.Println("Getting maxUnackedMessagesOnConsumer")
+	maxUnacked, err := suite.pulsarClient.GetTopicMaxUnackedMessagesPerConsumer(topic)
+	suite.Require().NoError(err)
+	fmt.Printf("Current maxUnackedMessagesOnConsumer: %d\n", maxUnacked)
+
+	if maxUnacked != 1 {
+		fmt.Println("maxUnackedMessagesOnConsumer is not set to 1, setting it")
+		err = suite.pulsarClient.SetTopicMaxUnackedMessagesPerConsumer(topic, 1)
+		suite.Require().NoError(err)
+		fmt.Println("Sleeping for 1 second to allow the setting to take effect")
+		time.Sleep(1 * time.Second)
+		maxUnacked, err = suite.pulsarClient.GetTopicMaxUnackedMessagesPerConsumer(topic)
+		suite.Require().NoError(err)
+		fmt.Printf("maxUnackedMessagesOnConsumer after set: %d\n", maxUnacked)
+	}
+
+	suite.Require().Equal(1, maxUnacked, "maxUnackedMessagesOnConsumer should be 1")
+}
+
 func (suite *MainTestSuite) TestCreateProducerFullTopic() {
 	//create producer
 	producer, err := suite.pulsarClient.NewProducer(WithProducerFullTopic("persistent://ca-messaging/test-namespace/test-topic"))

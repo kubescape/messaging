@@ -29,7 +29,7 @@ const (
 	NetworkStreamTopic = "network-stream-v1"
 
 	CloudScannerOnFinishTopic   = "cloud-scanner-results-v2"
-	CloudSchedulerOnFinishTopic = "cloud-scanner-tasks-v1"
+	CloudSchedulerOnFinishTopic = "cloud-scanner-tasks-v2"
 	CloudSchedulerCommandTopic  = "cloud-scheduler-command-v1"
 
 	RegistryStatusTopic = "registry-status-v1"

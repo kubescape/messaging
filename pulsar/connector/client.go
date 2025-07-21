@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/kubescape/messaging/pulsar/config"
@@ -19,6 +22,7 @@ const (
 	adminPath            = "/admin/v2"
 	tenantsPath          = adminPath + "/tenants"
 	namespacesPath       = adminPath + "/namespaces"
+	topicsPath           = adminPath + "/persistent"
 
 	dlqNamespaceSuffix   = "-dlqs"
 	retryNamespaceSuffix = "-retry"
@@ -36,6 +40,8 @@ type Client interface {
 	GetConfig() config.PulsarConfig
 	NewProducer(createProducerOption ...CreateProducerOption) (Producer, error)
 	NewConsumer(createConsumerOpts ...CreateConsumerOption) (Consumer, error)
+	SetTopicMaxUnackedMessagesPerConsumer(topicName string, maxUnackedMessages int) error
+	GetTopicMaxUnackedMessagesPerConsumer(topicName string) (int, error)
 }
 
 type pulsarClient struct {
@@ -193,4 +199,86 @@ func pulsarAdminRequest(method, url string, body interface{}) error {
 		return nil
 	}
 	return fmt.Errorf("pulsar admin request: %s failed with status code: %d", url, resp.StatusCode)
+}
+
+// pulsarAdminRawRequest sends an HTTP request to the Pulsar admin API with a raw body, returns response body and status code
+func pulsarAdminRawRequest(method, url string, body io.Reader, contentType string) ([]byte, int, error) {
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		return nil, 0, err
+	}
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	httpClient := &http.Client{}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, resp.StatusCode, err
+	}
+	return respBody, resp.StatusCode, nil
+}
+
+func (p *pulsarClient) SetTopicMaxUnackedMessagesPerConsumer(topicName string, maxUnackedMessages int) error {
+	if p.config.AdminUrl == "" {
+		return fmt.Errorf("admin URL is not configured")
+	}
+	setURL := p.topicAdminURL(topicName)
+	body := strings.NewReader(fmt.Sprintf("%d", maxUnackedMessages))
+	respBody, status, err := pulsarAdminRawRequest(http.MethodPost, setURL, body, "application/json")
+	if err != nil {
+		return err
+	}
+	if status != 204 && status != 200 {
+		return fmt.Errorf("failed to set maxUnackedMessagesOnConsumer: status %d, body: %s", status, string(respBody))
+	}
+	return nil
+}
+
+func (p *pulsarClient) GetTopicMaxUnackedMessagesPerConsumer(topicName string) (int, error) {
+	if p.config.AdminUrl == "" {
+		return -1, fmt.Errorf("admin URL is not configured")
+	}
+	getURL := p.topicAdminURL(topicName)
+	respBody, status, err := pulsarAdminRawRequest(http.MethodGet, getURL, nil, "")
+	if err != nil {
+		return -1, err
+	}
+	val := strings.TrimSpace(string(respBody))
+	if status != 200 {
+		return 0, fmt.Errorf("unexpected status code: %d, body: %s", status, val)
+	}
+	if val == "" {
+		return -1, nil
+	}
+	num, err := strconv.Atoi(val)
+	if err != nil {
+		return -1, fmt.Errorf("failed to parse value: %s", val)
+	}
+	return num, nil
+}
+
+// topicAdminURL builds the admin URL for maxUnackedMessagesOnConsumer for a topic
+func (p *pulsarClient) topicAdminURL(topicName string) string {
+	fullTopicName := topicName
+	if !isFullTopicName(topicName) {
+		fullTopicName = fmt.Sprintf("%s/%s/%s", p.config.Tenant, p.config.Namespace, topicName)
+	}
+	return fmt.Sprintf("%s/admin/v2/persistent/%s/maxUnackedMessagesOnConsumer", p.config.AdminUrl, fullTopicName)
+}
+
+// isFullTopicName checks if the topic name includes tenant/namespace
+func isFullTopicName(topicName string) bool {
+	// A full topic name should contain at least two slashes (tenant/namespace/topic)
+	count := 0
+	for _, char := range topicName {
+		if char == '/' {
+			count++
+		}
+	}
+	return count >= 2
 }
