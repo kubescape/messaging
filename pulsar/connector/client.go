@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/kubescape/messaging/pulsar/config"
@@ -19,6 +22,7 @@ const (
 	adminPath            = "/admin/v2"
 	tenantsPath          = adminPath + "/tenants"
 	namespacesPath       = adminPath + "/namespaces"
+	topicsPath           = adminPath + "/persistent"
 
 	dlqNamespaceSuffix   = "-dlqs"
 	retryNamespaceSuffix = "-retry"
@@ -36,6 +40,8 @@ type Client interface {
 	GetConfig() config.PulsarConfig
 	NewProducer(createProducerOption ...CreateProducerOption) (Producer, error)
 	NewConsumer(createConsumerOpts ...CreateConsumerOption) (Consumer, error)
+	SetTopicMaxUnackedMessagesPerConsumer(topicName string, maxUnackedMessages int) error
+	GetTopicMaxUnackedMessagesPerConsumer(topicName string) (int, error)
 }
 
 type pulsarClient struct {
@@ -193,4 +199,84 @@ func pulsarAdminRequest(method, url string, body interface{}) error {
 		return nil
 	}
 	return fmt.Errorf("pulsar admin request: %s failed with status code: %d", url, resp.StatusCode)
+}
+
+// SetTopicMaxUnackedMessagesPerConsumer sets the max unacked messages per consumer for a topic
+func (p *pulsarClient) SetTopicMaxUnackedMessagesPerConsumer(topicName string, maxUnackedMessages int) error {
+	if p.config.AdminUrl == "" {
+		return fmt.Errorf("admin URL is not configured")
+	}
+
+	fullTopicName := topicName
+	if !isFullTopicName(topicName) {
+		fullTopicName = fmt.Sprintf("%s/%s/%s", p.config.Tenant, p.config.Namespace, topicName)
+	}
+
+	setURL := fmt.Sprintf("%s/admin/v2/persistent/%s/maxUnackedMessagesOnConsumer", p.config.AdminUrl, fullTopicName)
+	body := strings.NewReader(fmt.Sprintf("%d", maxUnackedMessages))
+	req, err := http.NewRequest(http.MethodPost, setURL, body)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	httpClient := &http.Client{}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 204 && resp.StatusCode != 200 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to set maxUnackedMessagesOnConsumer: status %d, body: %s", resp.StatusCode, string(respBody))
+	}
+	return nil
+}
+
+// GetTopicMaxUnackedMessagesPerConsumer gets the max unacked messages per consumer for a topic
+// if there is a problem with the request(topic,response), it will return -1
+func (p *pulsarClient) GetTopicMaxUnackedMessagesPerConsumer(topicName string) (int, error) {
+	if p.config.AdminUrl == "" {
+		return -1, fmt.Errorf("admin URL is not configured")
+	}
+
+	fullTopicName := topicName
+	if !isFullTopicName(topicName) {
+		fullTopicName = fmt.Sprintf("%s/%s/%s", p.config.Tenant, p.config.Namespace, topicName)
+	}
+
+	getURL := fmt.Sprintf("%s/admin/v2/persistent/%s/maxUnackedMessagesOnConsumer", p.config.AdminUrl, fullTopicName)
+	resp, err := http.Get(getURL)
+	if err != nil {
+		return -1, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return -1, err
+	}
+	val := strings.TrimSpace(string(body))
+	if resp.StatusCode != 200 {
+		return 0, fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, val)
+	}
+	if val == "" {
+		return -1, nil
+	}
+	num, err := strconv.Atoi(val)
+	if err != nil {
+		return -1, fmt.Errorf("failed to parse value: %s", val)
+	}
+	//success, return the value
+	return num, nil
+}
+
+// isFullTopicName checks if the topic name includes tenant/namespace
+func isFullTopicName(topicName string) bool {
+	// A full topic name should contain at least two slashes (tenant/namespace/topic)
+	count := 0
+	for _, char := range topicName {
+		if char == '/' {
+			count++
+		}
+	}
+	return count >= 2
 }
