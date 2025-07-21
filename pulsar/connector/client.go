@@ -201,62 +201,56 @@ func pulsarAdminRequest(method, url string, body interface{}) error {
 	return fmt.Errorf("pulsar admin request: %s failed with status code: %d", url, resp.StatusCode)
 }
 
-// SetTopicMaxUnackedMessagesPerConsumer sets the max unacked messages per consumer for a topic
+// pulsarAdminRawRequest sends an HTTP request to the Pulsar admin API with a raw body, returns response body and status code
+func pulsarAdminRawRequest(method, url string, body io.Reader, contentType string) ([]byte, int, error) {
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		return nil, 0, err
+	}
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	httpClient := &http.Client{}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, resp.StatusCode, err
+	}
+	return respBody, resp.StatusCode, nil
+}
+
 func (p *pulsarClient) SetTopicMaxUnackedMessagesPerConsumer(topicName string, maxUnackedMessages int) error {
 	if p.config.AdminUrl == "" {
 		return fmt.Errorf("admin URL is not configured")
 	}
-
-	fullTopicName := topicName
-	if !isFullTopicName(topicName) {
-		fullTopicName = fmt.Sprintf("%s/%s/%s", p.config.Tenant, p.config.Namespace, topicName)
-	}
-
-	setURL := fmt.Sprintf("%s/admin/v2/persistent/%s/maxUnackedMessagesOnConsumer", p.config.AdminUrl, fullTopicName)
+	setURL := p.topicAdminURL(topicName)
 	body := strings.NewReader(fmt.Sprintf("%d", maxUnackedMessages))
-	req, err := http.NewRequest(http.MethodPost, setURL, body)
+	respBody, status, err := pulsarAdminRawRequest(http.MethodPost, setURL, body, "application/json")
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Content-Type", "application/json")
-	httpClient := &http.Client{}
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 204 && resp.StatusCode != 200 {
-		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("failed to set maxUnackedMessagesOnConsumer: status %d, body: %s", resp.StatusCode, string(respBody))
+	if status != 204 && status != 200 {
+		return fmt.Errorf("failed to set maxUnackedMessagesOnConsumer: status %d, body: %s", status, string(respBody))
 	}
 	return nil
 }
 
-// GetTopicMaxUnackedMessagesPerConsumer gets the max unacked messages per consumer for a topic
-// if there is a problem with the request(topic,response), it will return -1
 func (p *pulsarClient) GetTopicMaxUnackedMessagesPerConsumer(topicName string) (int, error) {
 	if p.config.AdminUrl == "" {
 		return -1, fmt.Errorf("admin URL is not configured")
 	}
-
-	fullTopicName := topicName
-	if !isFullTopicName(topicName) {
-		fullTopicName = fmt.Sprintf("%s/%s/%s", p.config.Tenant, p.config.Namespace, topicName)
-	}
-
-	getURL := fmt.Sprintf("%s/admin/v2/persistent/%s/maxUnackedMessagesOnConsumer", p.config.AdminUrl, fullTopicName)
-	resp, err := http.Get(getURL)
+	getURL := p.topicAdminURL(topicName)
+	respBody, status, err := pulsarAdminRawRequest(http.MethodGet, getURL, nil, "")
 	if err != nil {
 		return -1, err
 	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return -1, err
-	}
-	val := strings.TrimSpace(string(body))
-	if resp.StatusCode != 200 {
-		return 0, fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, val)
+	val := strings.TrimSpace(string(respBody))
+	if status != 200 {
+		return 0, fmt.Errorf("unexpected status code: %d, body: %s", status, val)
 	}
 	if val == "" {
 		return -1, nil
@@ -265,8 +259,16 @@ func (p *pulsarClient) GetTopicMaxUnackedMessagesPerConsumer(topicName string) (
 	if err != nil {
 		return -1, fmt.Errorf("failed to parse value: %s", val)
 	}
-	//success, return the value
 	return num, nil
+}
+
+// topicAdminURL builds the admin URL for maxUnackedMessagesOnConsumer for a topic
+func (p *pulsarClient) topicAdminURL(topicName string) string {
+	fullTopicName := topicName
+	if !isFullTopicName(topicName) {
+		fullTopicName = fmt.Sprintf("%s/%s/%s", p.config.Tenant, p.config.Namespace, topicName)
+	}
+	return fmt.Sprintf("%s/admin/v2/persistent/%s/maxUnackedMessagesOnConsumer", p.config.AdminUrl, fullTopicName)
 }
 
 // isFullTopicName checks if the topic name includes tenant/namespace
