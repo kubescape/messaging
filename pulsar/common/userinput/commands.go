@@ -59,16 +59,18 @@ const (
 	UserInputCommandCreateTeamsChannel = UserInputCommand("create-teams-channel")
 
 	//cloud account actions
-	UserInputCommandCreateCloudAccount = UserInputCommand("create-cloud-account")
-	UserInputCommandUpdateCloudAccount = UserInputCommand("update-cloud-account")
-	UserInputCommandDeleteCloudAccount = UserInputCommand("delete-cloud-account")
-	UserInputCommandScanCloudAccount   = UserInputCommand("scan-cloud-account")
+	UserInputCommandCreateCloudAccount   = UserInputCommand("create-cloud-account")
+	UserInputCommandUpdateCloudAccount   = UserInputCommand("update-cloud-account")
+	UserInputCommandDeleteCloudAccount   = UserInputCommand("delete-cloud-account")
+	UserInputCommandDeleteAccountFeature = UserInputCommand("delete-account-feature")
+	UserInputCommandScanCloudAccount     = UserInputCommand("scan-cloud-account")
 
 	//aws organization actions
-	UserInputCommandCreateOrganization = UserInputCommand("create-organization")
-	UserInputCommandUpdateOrganization = UserInputCommand("update-organization")
-	UserInputCommandDeleteOrganization = UserInputCommand("delete-organization")
-	UserInputCommandScanOrganization   = UserInputCommand("sync-organization")
+	UserInputCommandCreateOrganization        = UserInputCommand("create-organization")
+	UserInputCommandUpdateOrganization        = UserInputCommand("update-organization")
+	UserInputCommandDeleteOrganization        = UserInputCommand("delete-organization")
+	UserInputCommandDeleteOrganizationFeature = UserInputCommand("delete-organization-feature")
+	UserInputCommandScanOrganization          = UserInputCommand("sync-organization")
 
 	UserInputCommandSendOperatorApiCommand = UserInputCommand("send-operator-api-command")
 
