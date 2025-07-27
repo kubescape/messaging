@@ -228,6 +228,15 @@ func (suite *MainTestSuite) TestSetAndGetMaxUnackedMessagesOnConsumer() {
 	}
 
 	suite.Require().Equal(1, maxUnacked, "maxUnackedMessagesOnConsumer should be 1")
+
+	fmt.Println("Removing maxUnackedMessagesOnConsumer")
+	err = suite.pulsarClient.RemoveTopicMaxUnackedMessagesPerConsumer(topic)
+	suite.Require().NoError(err)
+	fmt.Println("Sleeping for 1 second to allow the removal to take effect")
+	time.Sleep(1 * time.Second)
+	maxUnacked, err = suite.pulsarClient.GetTopicMaxUnackedMessagesPerConsumer(topic)
+	suite.Require().NoError(err)
+	fmt.Printf("maxUnackedMessagesOnConsumer after remove: %d\n", maxUnacked)
 }
 
 func (suite *MainTestSuite) TestCreateProducerFullTopic() {

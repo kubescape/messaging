@@ -42,6 +42,7 @@ type Client interface {
 	NewConsumer(createConsumerOpts ...CreateConsumerOption) (Consumer, error)
 	SetTopicMaxUnackedMessagesPerConsumer(topicName string, maxUnackedMessages int) error
 	GetTopicMaxUnackedMessagesPerConsumer(topicName string) (int, error)
+	RemoveTopicMaxUnackedMessagesPerConsumer(topicName string) error
 }
 
 type pulsarClient struct {
@@ -260,6 +261,21 @@ func (p *pulsarClient) GetTopicMaxUnackedMessagesPerConsumer(topicName string) (
 		return -1, fmt.Errorf("failed to parse value: %s", val)
 	}
 	return num, nil
+}
+
+func (p *pulsarClient) RemoveTopicMaxUnackedMessagesPerConsumer(topicName string) error {
+	if p.config.AdminUrl == "" {
+		return fmt.Errorf("admin URL is not configured")
+	}
+	removeURL := p.topicAdminURL(topicName)
+	respBody, status, err := pulsarAdminRawRequest(http.MethodDelete, removeURL, nil, "")
+	if err != nil {
+		return err
+	}
+	if status != 204 && status != 200 {
+		return fmt.Errorf("failed to remove maxUnackedMessagesOnConsumer: status %d, body: %s", status, string(respBody))
+	}
+	return nil
 }
 
 // topicAdminURL builds the admin URL for maxUnackedMessagesOnConsumer for a topic
