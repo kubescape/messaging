@@ -32,6 +32,8 @@ const (
 	CloudSchedulerOnFinishTopic = "cloud-scanner-tasks-v2"
 	CloudSchedulerCommandTopic  = "cloud-scheduler-command-v1"
 
+	CloudVulnScanDispatcherTopic = "cloud-vuln-scan-dispatcher-v1"
+
 	RegistryStatusTopic = "registry-status-v1"
 
 	NewJiraTicketByUNSTopic = "new-jira-ticket-by-uns-v1"
