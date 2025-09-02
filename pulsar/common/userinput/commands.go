@@ -9,6 +9,7 @@ const (
 	ErrorKey              = "error"
 	ReplyTopicKey         = "replyTopic"
 	TimestampKey          = "timestamp"
+	NeedReplyMessageKey   = "needReplyMessage"
 )
 
 const (
