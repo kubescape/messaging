@@ -34,6 +34,7 @@ const (
 	// RuntimeIncident actions
 	UserInputCommandUpdateRunTimeIncident = UserInputCommand("update-run-time-incident")
 	UserInputCommandDeleteRunTimeIncident = UserInputCommand("delete-run-time-incident") // for backoffice
+	UserInputCommandChangeIncidentStatus  = UserInputCommand("change-incident-status")
 	// RuntimeIncidentPolicy mutating actions
 	UserInputCommandDeleteRuntimeIncidentPolicy = UserInputCommand("delete-runtime-incident-policy")
 	UserInputCommandUpdateRuntimeIncidentPolicy = UserInputCommand("update-runtime-incident-policy")
