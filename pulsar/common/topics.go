@@ -37,4 +37,6 @@ const (
 	RegistryStatusTopic = "registry-status-v1"
 
 	NewJiraTicketByUNSTopic = "new-jira-ticket-by-uns-v1"
+
+	SIEMEventTopic = "siem-event-v1"
 )
