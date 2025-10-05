@@ -91,4 +91,9 @@ const (
 	UserInputCommandDeleteWebhook = UserInputCommand("delete-webhook")
 	UserInputCommandUpdateWebhook = UserInputCommand("update-webhook")
 	UserInputCommandCreateWebhook = UserInputCommand("create-webhook")
+
+	// Siem Integration actions
+	UserInputCommandCreateSIEMIntegration = UserInputCommand("create-siem-integration")
+	UserInputCommandUpdateSIEMIntegration = UserInputCommand("update-siem-integration")
+	UserInputCommandDeleteSIEMIntegration = UserInputCommand("delete-siem-integration")
 )
