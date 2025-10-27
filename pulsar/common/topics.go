@@ -38,5 +38,7 @@ const (
 
 	NewJiraTicketByUNSTopic = "new-jira-ticket-by-uns-v1"
 
+	ResolveTicketTopic = "resolve-ticket-v1"
+
 	SIEMEventTopic = "siem-event-v1"
 )
