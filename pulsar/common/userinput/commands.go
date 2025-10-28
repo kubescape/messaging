@@ -39,9 +39,13 @@ const (
 	UserInputCommandDeleteRuntimeIncidentPolicy = UserInputCommand("delete-runtime-incident-policy")
 	UserInputCommandUpdateRuntimeIncidentPolicy = UserInputCommand("update-runtime-incident-policy")
 	UserInputCommandCreateRuntimeIncidentPolicy = UserInputCommand("create-runtime-incident-policy")
-	UserInputCommandCreateIgnoreRule            = UserInputCommand("create-ignore-rule")
-	UserInputCommandUpdateIgnoreRule            = UserInputCommand("update-ignore-rule")
-	UserInputCommandDeleteIgnoreRule            = UserInputCommand("delete-ignore-rule")
+	// RuntimeRule mutating actions
+	UserInputCommandDeleteRuntimeRule = UserInputCommand("delete-runtime-rule")
+	UserInputCommandUpdateRuntimeRule = UserInputCommand("update-runtime-rule")
+	UserInputCommandCreateRuntimeRule = UserInputCommand("create-runtime-rule")
+	UserInputCommandCreateIgnoreRule  = UserInputCommand("create-ignore-rule")
+	UserInputCommandUpdateIgnoreRule  = UserInputCommand("update-ignore-rule")
+	UserInputCommandDeleteIgnoreRule  = UserInputCommand("delete-ignore-rule")
 	//ApplicationProfile actions
 	UserInputCommandAddToApplicationProfile      = UserInputCommand("add-to-application-profile")
 	UserInputCommandDeleteFromApplicationProfile = UserInputCommand("delete-from-application-profile")
