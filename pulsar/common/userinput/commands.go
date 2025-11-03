@@ -74,6 +74,7 @@ const (
 	//aws organization actions
 	UserInputCommandCreateOrganization        = UserInputCommand("create-organization")
 	UserInputCommandUpdateOrganization        = UserInputCommand("update-organization")
+	UserInputCommandPartialUpdateOrganization = UserInputCommand("partial-update-organization")
 	UserInputCommandDeleteOrganization        = UserInputCommand("delete-organization")
 	UserInputCommandDeleteOrganizationFeature = UserInputCommand("delete-organization-feature")
 	UserInputCommandScanOrganization          = UserInputCommand("sync-organization")
