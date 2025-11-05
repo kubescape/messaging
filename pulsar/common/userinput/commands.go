@@ -87,7 +87,9 @@ const (
 
 	UserInputCommandSendOperatorApiCommand = UserInputCommand("send-operator-api-command")
 
-	UserInputCommandNewJiraTicketByUser    = UserInputCommand("new-jira-ticket-by-user")
+	// TO DEPRECATE
+	UserInputCommandNewJiraTicketByUser = UserInputCommand("new-jira-ticket-by-user")
+	// TO DEPRECATE
 	UserInputCommandUnlinkJiraTicketByUser = UserInputCommand("unlink-jira-ticket-by-user")
 
 	UserInputCommandNewTicketByUser    = UserInputCommand("new-ticket-by-user")
