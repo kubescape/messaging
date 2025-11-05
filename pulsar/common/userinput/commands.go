@@ -10,6 +10,12 @@ const (
 	ReplyTopicKey         = "replyTopic"
 	TimestampKey          = "timestamp"
 	SkipReplyMessageKey   = "skipReplyMessage"
+
+	// customer config keys
+	CustomerConfigFieldKey = "customerConfigField"
+
+	// customer config field values
+	CustomerConfigFieldTicketProvider = "ticketProvider"
 )
 
 const (
@@ -84,6 +90,9 @@ const (
 	UserInputCommandNewJiraTicketByUser    = UserInputCommand("new-jira-ticket-by-user")
 	UserInputCommandUnlinkJiraTicketByUser = UserInputCommand("unlink-jira-ticket-by-user")
 
+	UserInputCommandNewTicketByUser    = UserInputCommand("new-ticket-by-user")
+	UserInputCommandUnlinkTicketByUser = UserInputCommand("unlink-ticket-by-user")
+
 	UserInputCommandRuntimeIncidentResponse = UserInputCommand("runtime-incident-response")
 
 	UserInputCommandApplyNetworkPolicy  = UserInputCommand("apply-network-policy")
@@ -101,4 +110,7 @@ const (
 	UserInputCommandCreateSIEMIntegration = UserInputCommand("create-siem-integration")
 	UserInputCommandUpdateSIEMIntegration = UserInputCommand("update-siem-integration")
 	UserInputCommandDeleteSIEMIntegration = UserInputCommand("delete-siem-integration")
+
+	// Customer config actions
+	UserInputCommandUpdateCustomerConfig = UserInputCommand("update-customer-config")
 )

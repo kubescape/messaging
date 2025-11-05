@@ -26,6 +26,9 @@ const (
 
 	MsgPropActionValueEnrichNewJiraTicketByUNS  = "enrichNewJiraTicketByUNS"
 	MsgPropActionValueEnrichNewJiraTicketByUser = "enrichNewJiraTicketByUser"
+
+	MsgPropActionValueEnrichNewTicketByUNS  = "enrichNewTicketByUNS"
+	MsgPropActionValueEnrichNewTicketByUser = "enrichNewTicketByUser"
 )
 
 // MsgType for message types
