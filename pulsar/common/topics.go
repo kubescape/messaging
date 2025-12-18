@@ -41,4 +41,6 @@ const (
 	ResolveTicketTopic = "resolve-ticket-v1"
 
 	SIEMEventTopic = "siem-event-v1"
+
+	CloudHostAgentKeepAliveTopic = "cloud-host-agent-keep-alive-v1"
 )
