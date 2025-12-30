@@ -69,8 +69,8 @@ func (nbp *NackBackoffPolicy) Next(redeliveryCount uint32) time.Duration {
 
 // calculateIncrementalDelay computes the delay for the next redelivery based on the redelivery count.
 func (nbp *NackBackoffPolicy) calculateIncrementalDelay(redeliveryCount uint32) time.Duration {
-	redeliveryCount++
-	// Use exponential backoff: base * 2^redeliveryCount (same as Pulsar's DefaultBackoffPolicy)
+	// Use exponential backoff: base * 2^redeliveryCount
+	// redeliveryCount represents how many times the message has been redelivered so far
 	exponentialMultiplier := uint32(1 << redeliveryCount) // 2^redeliveryCount
 
 	// Cap at maxRedeliveryDelayMultiplier if configured
