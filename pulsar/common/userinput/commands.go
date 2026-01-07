@@ -37,6 +37,8 @@ const (
 	UserInputCommandUpdateExceptionSecurityRisk                  = UserInputCommand("update-exception-security-risk")
 	UserInputCommandMarkForDeletionExceptionSecurityRisk         = UserInputCommand("mark-for-deletion-exception-security-risk")
 	UserInputCommandMarkForDeletionKubernetesResourceRelatedData = UserInputCommand("mark-for-deletion-kubernetes-resource-related-data")
+	// RuntimeAlert actions
+	UserInputCommandUpdateRunTimeAlert = UserInputCommand("update-run-time-alert")
 	// RuntimeIncident actions
 	UserInputCommandUpdateRunTimeIncident = UserInputCommand("update-run-time-incident")
 	UserInputCommandDeleteRunTimeIncident = UserInputCommand("delete-run-time-incident") // for backoffice
