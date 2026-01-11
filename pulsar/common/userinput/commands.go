@@ -79,6 +79,8 @@ const (
 	UserInputCommandDeleteAccountFeature = UserInputCommand("delete-account-feature")
 	UserInputCommandScanCloudAccount     = UserInputCommand("scan-cloud-account")
 
+	UserInputCommandDeleteHostAgent = UserInputCommand("delete-host-agent")
+
 	//aws organization actions
 	UserInputCommandCreateOrganization        = UserInputCommand("create-organization")
 	UserInputCommandUpdateOrganization        = UserInputCommand("update-organization")
