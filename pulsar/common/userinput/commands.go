@@ -119,4 +119,8 @@ const (
 
 	// Customer config actions
 	UserInputCommandUpdateCustomerConfig = UserInputCommand("update-customer-config")
+
+	// ECS cluster actions
+	UserInputCommandCreateECSCluster = UserInputCommand("create-ecs-cluster")
+	UserInputCommandDeleteECSCluster = UserInputCommand("delete-ecs-cluster")
 )
