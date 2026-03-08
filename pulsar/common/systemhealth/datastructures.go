@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/armosec/armoapi-go/armotypes"
+	"github.com/kubescape/messaging/pulsar/common/scanfailure"
 )
 
 type ClusterStatusOnFinishedMessage struct {
@@ -36,4 +37,14 @@ type ClusterStatusNotification struct {
 
 func (c *ClusterStatusNotification) SameClusterStatus(status string) bool {
 	return c.Status == status
+}
+
+// ScanFailureOnFinishedMessage wraps a ScanFailureReport with onFinish metadata
+// for UNS consumption. Rate-limit fields are populated when the daily limit is hit.
+type ScanFailureOnFinishedMessage struct {
+	scanfailure.ScanFailureReport
+	SendTime           time.Time `json:"sendTime"`
+	IsRateLimitSummary bool      `json:"isRateLimitSummary,omitempty"`
+	DailyCount         int       `json:"dailyCount,omitempty"`
+	DailyLimit         int       `json:"dailyLimit,omitempty"`
 }
