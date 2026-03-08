@@ -43,4 +43,7 @@ const (
 	SIEMEventTopic = "siem-event-v1"
 
 	CloudHostAgentKeepAliveTopic = "cloud-host-agent-keep-alive-v1"
+
+	// scan failure topic
+	ScanFailureTopic = "scan-failure-v1"
 )
