@@ -10,6 +10,7 @@ type WorkloadIdentifier = scanfailure.WorkloadIdentifier
 type ScanFailureReport = scanfailure.ScanFailureReport
 
 const (
+	ScanFailureUnknown        = scanfailure.ScanFailureUnknown
 	ScanFailureCVE            = scanfailure.ScanFailureCVE
 	ScanFailureSBOMGeneration = scanfailure.ScanFailureSBOMGeneration
 	ScanFailureOOMKilled      = scanfailure.ScanFailureOOMKilled
