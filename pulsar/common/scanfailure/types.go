@@ -6,7 +6,6 @@ import "github.com/armosec/armoapi-go/scanfailure"
 // New code should import from github.com/armosec/armoapi-go/scanfailure directly.
 
 type ScanFailureCase = scanfailure.ScanFailureCase
-type WorkloadIdentifier = scanfailure.WorkloadIdentifier
 type ScanFailureReport = scanfailure.ScanFailureReport
 
 const (
