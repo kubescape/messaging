@@ -4,7 +4,7 @@ go 1.24.1
 
 require (
 	github.com/apache/pulsar-client-go v0.16.0
-	github.com/armosec/armoapi-go v0.0.689
+	github.com/armosec/armoapi-go v0.0.690
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/otel v1.37.0
