@@ -22,6 +22,7 @@ type RuntimeIncidentIngesterOnFinishedMessage struct {
 	Resource            identifiers.PortalDesignator `json:"resource"` // Pod, Node, Workload, Namespace, Cluster, etc.
 	Response            *RuntimeIncidentResponse     `json:"response,omitempty"`
 	PolicyGUIDToName    map[string]string            `json:"policyGUIDToName"`
+	Classification      string                       `json:"classification,omitempty"`
 }
 
 type RuntimeIncidentResponse struct {
