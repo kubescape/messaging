@@ -52,4 +52,7 @@ const (
 
 	// scan failure topic
 	ScanFailureTopic = "scan-failure-v1"
+
+	// incident classification topics
+	IncidentClassificationRequestTopic = "incident-classification-request-v1"
 )
