@@ -55,4 +55,9 @@ const (
 
 	// incident classification topics
 	IncidentClassificationRequestTopic = "incident-classification-request-v1"
+
+	// storage topics — produced by cadashboardbe's storage server,
+	// consumed by event-ingester-service.
+	StorageContainerProfilesTopic = "storage-container-profiles-v1"
+	StorageSBOMsTopic             = "storage-sboms-v1"
 )
