@@ -45,10 +45,12 @@ const (
 
 	CloudHostAgentKeepAliveTopic = "cloud-host-agent-keep-alive-v1"
 
+	CloudAiSandboxHeartbeatTopic = "ai-sandbox-heartbeat-v1"
+
 	// hot CVE topics
-	HotCVEDefinitionsTopic                = "hot-cve-definitions-v1"
-	HotCVEOnFinishPulsarTopic             = "hot-cve-on-finish-v1"
-	HotCVEOnFinishedMessageTypeProp       = "HotCVEOnFinished" // MsgPropMessageType value for hot CVE on-finish messages on k8s-objects-finished-v1
+	HotCVEDefinitionsTopic          = "hot-cve-definitions-v1"
+	HotCVEOnFinishPulsarTopic       = "hot-cve-on-finish-v1"
+	HotCVEOnFinishedMessageTypeProp = "HotCVEOnFinished" // MsgPropMessageType value for hot CVE on-finish messages on k8s-objects-finished-v1
 
 	// scan failure topic
 	ScanFailureTopic = "scan-failure-v1"
