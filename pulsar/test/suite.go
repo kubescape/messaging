@@ -153,7 +153,10 @@ func (suite *PulsarTestSuite) startPulsar(contName string) {
 		suite.FailNow("failed to start pulsar", err.Error(), string(out))
 	}
 	suite.T().Log("waiting for pulsar to start")
-	for i := 0; i < 30; i++ {
+	// 90 attempts x 2s = 180s. Some CI runner images have been observed taking
+	// well over the previous 60s budget for rootless container networking
+	// (port-forwarding) to become reachable even though Pulsar itself is up.
+	for i := 0; i < 90; i++ {
 		isAlive := suite.checkPulsarIsAlive()
 		if isAlive {
 			return
