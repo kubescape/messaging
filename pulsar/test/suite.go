@@ -2,10 +2,10 @@ package test
 
 import (
 	_ "embed"
-	"errors"
 	"fmt"
-	"net"
+	"os"
 	"os/exec"
+	"syscall"
 
 	"net/http"
 	"time"
@@ -20,6 +20,18 @@ import (
 
 const (
 	pulsarKAURL = "%s/admin/v2/brokers/ready"
+
+	// Pulsar now runs with --network=host (see startPulsar/pulsar.sh) so
+	// its ports are fixed at the image's built-in defaults rather than
+	// remappable per-container.
+	pulsarBrokerPort = 6650
+	pulsarAdminPort  = 8080
+
+	// System-wide lock path: with --network=host every container binds
+	// the same fixed ports, so concurrent PulsarTestSuite instances
+	// (e.g. two Go packages running in parallel in the same CI job) must
+	// be serialized rather than isolated via distinct remapped ports.
+	pulsarTestLockPath = "/tmp/kubescape-pulsar-test.lock"
 )
 
 //go:embed scripts/pulsar.sh
@@ -32,9 +44,13 @@ type PulsarTestSuite struct {
 	suite.Suite
 	DefaultTestConfig config.PulsarConfig
 	Client            connector.Client
-	AppPortStart      int
-	AdminPortStart    int
-	shutdownFunc      func()
+	// AppPortStart/AdminPortStart are retained for API compatibility but
+	// no longer used: Pulsar runs with --network=host and always binds
+	// pulsarBrokerPort/pulsarAdminPort. See pulsarTestLockPath.
+	AppPortStart   int
+	AdminPortStart int
+	shutdownFunc   func()
+	lockFile       *os.File
 }
 
 func (suite *PulsarTestSuite) SetupSuite() {
@@ -47,19 +63,29 @@ func (suite *PulsarTestSuite) SetupSuite() {
 		RedeliveryDelaySeconds: 0,
 	}
 
-	randomContainerName := fmt.Sprintf("pulsar-test-%d-%d", suite.AdminPortStart, time.Now().UnixNano())
-	if suite.AppPortStart == 0 {
-		suite.AppPortStart = 6650
+	lockFile, err := os.OpenFile(pulsarTestLockPath, os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		suite.FailNow("failed to open pulsar test lock file", err.Error())
 	}
-	if suite.AdminPortStart == 0 {
-		suite.AdminPortStart = 8080
+	suite.T().Log("waiting for pulsar test lock")
+	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX); err != nil {
+		suite.FailNow("failed to acquire pulsar test lock", err.Error())
 	}
+	suite.T().Log("acquired pulsar test lock")
+	suite.lockFile = lockFile
+	// Safe no-op default: if startPulsar below fails via FailNow before
+	// the real shutdownFunc is assigned, TearDownSuite still calls
+	// shutdownFunc() unconditionally, and it must not panic on nil or the
+	// lock release right after it would never run -- leaving every other
+	// concurrent PulsarTestSuite blocked indefinitely.
+	suite.shutdownFunc = func() {}
+
+	randomContainerName := fmt.Sprintf("pulsar-test-%d", time.Now().UnixNano())
 	//start pulsar
 	suite.startPulsar(randomContainerName)
 
 	x, _ := json.Marshal(suite.DefaultTestConfig)
 	fmt.Println(string(x))
-	var err error
 	//ensure pulsar connection
 	suite.Client, err = connector.NewClient(connector.WithConfig(&suite.DefaultTestConfig))
 	if err != nil {
@@ -95,8 +121,20 @@ func (suite *PulsarTestSuite) checkPulsarIsAlive() bool {
 func (suite *PulsarTestSuite) TearDownSuite() {
 	suite.T().Log("tear down suite")
 	suite.shutdownFunc()
-	suite.Assert().NoError(killPortProcess(suite.AppPortStart))
-	suite.Assert().NoError(killPortProcess(suite.AdminPortStart))
+	suite.Assert().NoError(killPortProcess(pulsarBrokerPort))
+	suite.Assert().NoError(killPortProcess(pulsarAdminPort))
+	suite.releasePulsarTestLock()
+}
+
+func (suite *PulsarTestSuite) releasePulsarTestLock() {
+	if suite.lockFile == nil {
+		return
+	}
+	if err := syscall.Flock(int(suite.lockFile.Fd()), syscall.LOCK_UN); err != nil {
+		suite.T().Log("failed to release pulsar test lock:", err.Error())
+	}
+	suite.lockFile.Close()
+	suite.lockFile = nil
 }
 
 func (suite *PulsarTestSuite) SetupTest() {
@@ -111,40 +149,23 @@ func (suite *PulsarTestSuite) TearDownTest() {
 	}
 }
 
-func findFreePort(rangeStart, rangeEnd int) (int, error) {
-	for port := rangeStart; port <= rangeEnd; port++ {
-		address := fmt.Sprintf("localhost:%d", port)
-		conn, err := net.DialTimeout("tcp", address, 1*time.Second)
-		if conn != nil {
-			conn.Close()
-		}
-		if err != nil { // port is available since we got no response
-			return port, nil
-		}
-		conn.Close()
-	}
-	return 0, errors.New("no free port found")
-}
-
 func (suite *PulsarTestSuite) startPulsar(contName string) {
 	suite.T().Log("stopping existing pulsar container")
 	exec.Command("/bin/sh", "-c", pulsarStopCommand).Run()
 	suite.T().Log("starting pulsar")
 
-	pulsarAppPort, err := findFreePort(suite.AppPortStart, suite.AppPortStart+100)
-	if err != nil {
-		suite.FailNow("failed to find free port", err.Error())
-	}
-	suite.DefaultTestConfig.URL = fmt.Sprintf("pulsar://localhost:%d", pulsarAppPort)
-	suite.AppPortStart = pulsarAppPort
-	pulsarAdminPort, err := findFreePort(suite.AdminPortStart, suite.AdminPortStart+100)
-	if err != nil {
-		suite.FailNow("failed to find free port for pulsar admin", err.Error())
-	}
+	// --network=host (see pulsar.sh): bridge-network port publishing
+	// (-p host:container) has been observed hanging indefinitely on some
+	// CI runner images -- the container comes up and Pulsar itself logs
+	// ready, but the published host port never becomes reachable. Host
+	// networking bypasses that path entirely, at the cost of Pulsar
+	// always binding its fixed default ports rather than a remapped free
+	// one; the pulsarTestLockPath flock in SetupSuite is what keeps
+	// concurrent suites from colliding on those fixed ports.
+	suite.DefaultTestConfig.URL = fmt.Sprintf("pulsar://localhost:%d", pulsarBrokerPort)
 	suite.DefaultTestConfig.AdminUrl = fmt.Sprintf("http://localhost:%d", pulsarAdminPort)
-	suite.AdminPortStart = pulsarAdminPort
 
-	formattedScript := fmt.Sprintf(startPulsarScript, pulsarAppPort, pulsarAdminPort, contName)
+	formattedScript := fmt.Sprintf(startPulsarScript, contName)
 	out, err := exec.Command("/bin/sh", "-c", formattedScript).CombinedOutput()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
@@ -153,9 +174,8 @@ func (suite *PulsarTestSuite) startPulsar(contName string) {
 		suite.FailNow("failed to start pulsar", err.Error(), string(out))
 	}
 	suite.T().Log("waiting for pulsar to start")
-	// 90 attempts x 2s = 180s. Some CI runner images have been observed taking
-	// well over the previous 60s budget for rootless container networking
-	// (port-forwarding) to become reachable even though Pulsar itself is up.
+	// 90 attempts x 2s = 180s safety margin; --network=host has been
+	// confirmed reachable within ~15s in practice.
 	for i := 0; i < 90; i++ {
 		isAlive := suite.checkPulsarIsAlive()
 		if isAlive {
@@ -168,7 +188,7 @@ func (suite *PulsarTestSuite) startPulsar(contName string) {
 	if err != nil {
 		fmt.Println(string(outbytes), err.Error())
 	}
-	killPortProcess(suite.AppPortStart)
-	killPortProcess(suite.AdminPortStart)
+	killPortProcess(pulsarBrokerPort)
+	killPortProcess(pulsarAdminPort)
 	suite.FailNow("failed to start pulsar")
 }
