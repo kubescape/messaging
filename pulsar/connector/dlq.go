@@ -89,7 +89,14 @@ func (nbp *NackBackoffPolicy) calculateIncrementalDelay(redeliveryCount uint32) 
 
 	if useExponential {
 		// Use exponential backoff: base * 2^redeliveryCount
-		exponentialMultiplier := uint32(1 << redeliveryCount) // 2^redeliveryCount
+		// 1 << n on a uint32 wraps to 0 once n >= 32, so a message stuck in
+		// redelivery for that long would otherwise get an instant redelivery
+		// instead of the (capped) maximum delay. Clamp the shift instead.
+		shift := redeliveryCount
+		if shift >= 32 {
+			shift = 31
+		}
+		exponentialMultiplier := uint32(1) << shift
 		if nbp.maxRedeliveryDelayMultiplier > 0 && exponentialMultiplier > nbp.maxRedeliveryDelayMultiplier {
 			exponentialMultiplier = nbp.maxRedeliveryDelayMultiplier
 		}
