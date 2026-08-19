@@ -1,11 +1,8 @@
 #!/bin/bash
 
-cr='docker'
-PODMAN_EXISTS=$(which podman)
-RET_VAL=$?
-
-if [ $RET_VAL -eq '0' ]; then
-    echo "podman exists."
+if command -v docker >/dev/null 2>&1; then
+    cr='docker'
+elif command -v podman >/dev/null 2>&1; then
     cr='podman'
 fi
 container_name=%s

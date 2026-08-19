@@ -286,11 +286,12 @@ func (suite *MainTestSuite) TestProduceMessage() {
 
 func (suite *MainTestSuite) startPulsar() {
 	suite.T().Log("stopping existing pulsar container")
-	exec.Command("/bin/sh", "-c", pulsarStopCommand).Run()
+	exec.Command("/bin/sh", "-c", fmt.Sprintf(pulsarStopCommand, "basic-suite")).Run()
 	time.Sleep(2 * time.Second)
 
 	suite.T().Log("starting pulsar")
 	out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf(pulsarDockerCommand, pulsarClientPort, pulsarAdminPort, "basic-suite")).CombinedOutput()
+	suite.T().Logf("start script output:\n%s", string(out))
 	if err != nil {
 		suite.FailNow("failed to start pulsar", err.Error(), string(out))
 	}
@@ -299,17 +300,31 @@ func (suite *MainTestSuite) startPulsar() {
 		suite.FailNow("failed to create request", err.Error())
 	}
 	suite.T().Log("waiting for pulsar to start")
-	client := http.Client{}
-	for i := 0; i < 40; i++ {
+	client := http.Client{Timeout: 5 * time.Second}
+	var lastErr error
+	for i := 0; i < 120; i++ {
 		resp, err := client.Do(req)
-		if err == nil && resp.StatusCode == http.StatusOK {
-			suite.T().Log("pulsar started")
+		if err == nil {
+			if resp.StatusCode == http.StatusOK {
+				suite.T().Log("pulsar started")
+				resp.Body.Close()
+				return
+			}
+			lastErr = fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 			resp.Body.Close()
-			return
+		} else {
+			lastErr = err
+		}
+		if i%10 == 0 {
+			suite.T().Logf("waiting for pulsar... attempt %d/120, last error: %v", i, lastErr)
 		}
 		time.Sleep(2 * time.Second)
 	}
-	suite.FailNow("failed to start pulsar")
+	dockerPs, _ := exec.Command("/bin/sh", "-c", "docker ps -a 2>&1").CombinedOutput()
+	dockerLogs, _ := exec.Command("/bin/sh", "-c", "docker logs --tail 50 basic-suite 2>&1").CombinedOutput()
+	podmanPs, _ := exec.Command("/bin/sh", "-c", "podman ps -a 2>&1").CombinedOutput()
+	podmanLogs, _ := exec.Command("/bin/sh", "-c", "podman logs --tail 50 basic-suite 2>&1").CombinedOutput()
+	suite.FailNow("failed to start pulsar", fmt.Sprintf("last error: %v\ndocker ps:\n%s\ndocker logs:\n%s\npodman ps:\n%s\npodman logs:\n%s", lastErr, string(dockerPs), string(dockerLogs), string(podmanPs), string(podmanLogs)))
 }
 
 func loadJson[T any](jsonBytes []byte) T {
