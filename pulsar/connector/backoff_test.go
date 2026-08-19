@@ -225,6 +225,15 @@ func TestNackBackoffPolicyExponential(t *testing.T) {
 			expectedDelay:         256 * time.Second, // 2^10 = 1024, but capped at 256
 			expectedValidationErr: false,
 		},
+		{
+			name:                  "Exponential: redelivery count 32 should still hit the cap, not reset to zero",
+			minMultiplier:         1,
+			maxMultiplier:         256,
+			baseDelay:             1 * time.Second,
+			redeliveryCount:       32,
+			expectedDelay:         256 * time.Second,
+			expectedValidationErr: false,
+		},
 	}
 
 	for _, tt := range tests {
