@@ -128,7 +128,7 @@ func findFreePort(rangeStart, rangeEnd int) (int, error) {
 
 func (suite *PulsarTestSuite) startPulsar(contName string) {
 	suite.T().Log("stopping existing pulsar container")
-	exec.Command("/bin/sh", "-c", pulsarStopCommand).Run()
+	exec.Command("/bin/sh", "-c", fmt.Sprintf(pulsarStopCommand, contName)).Run()
 	suite.T().Log("starting pulsar")
 
 	pulsarAppPort, err := findFreePort(suite.AppPortStart, suite.AppPortStart+100)
@@ -153,13 +153,14 @@ func (suite *PulsarTestSuite) startPulsar(contName string) {
 		suite.FailNow("failed to start pulsar", err.Error(), string(out))
 	}
 	suite.T().Log("waiting for pulsar to start")
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 120; i++ {
 		isAlive := suite.checkPulsarIsAlive()
 		if isAlive {
 			return
 		}
 		time.Sleep(2 * time.Second)
 	}
+	logs, _ := exec.Command("/bin/sh", "-c", fmt.Sprintf("docker logs --tail 50 %s || podman logs --tail 50 %s", contName, contName)).CombinedOutput()
 	formmatedScript := fmt.Sprintf(pulsarStopCommand, contName)
 	outbytes, err := exec.Command("/bin/sh", "-c", formmatedScript).CombinedOutput()
 	if err != nil {
@@ -167,5 +168,5 @@ func (suite *PulsarTestSuite) startPulsar(contName string) {
 	}
 	killPortProcess(suite.AppPortStart)
 	killPortProcess(suite.AdminPortStart)
-	suite.FailNow("failed to start pulsar")
+	suite.FailNow("failed to start pulsar", fmt.Sprintf("container logs:\n%s", string(logs)))
 }

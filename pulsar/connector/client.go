@@ -79,12 +79,12 @@ func NewClient(options ...func(*PulsarClientOptions)) (Client, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("pulsar config is nil. use WithConfig to set it")
 	}
-	retryAttempts := 5
+	retryAttempts := 30
 	if clientOptions.retryAttempts != nil {
 		retryAttempts = *clientOptions.retryAttempts
 	}
 
-	retryMaxDelay := time.Second
+	retryMaxDelay := 2 * time.Second
 	if clientOptions.retryMaxDelay != nil {
 		retryMaxDelay = *clientOptions.retryMaxDelay
 	}
