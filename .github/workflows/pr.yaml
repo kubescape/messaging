@@ -10,7 +10,7 @@ jobs:
       pull-requests: write
     uses: kubescape/workflows/.github/workflows/go-basic-tests.yaml@main
     with:
-      GO_VERSION: "1.21"
+      GO_VERSION: "1.24.1"
   build:
     runs-on: ubuntu-latest
     steps:
@@ -19,7 +19,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version: "1.21"
+        go-version: "1.24.1"
 
     - uses: actions/cache@v4
       with:
@@ -40,5 +40,5 @@ jobs:
     - name: Build
       run: go build -v ./...
       
-    - name: Test
-      run: go test -timeout 500s ./...
+    - name: Integration tests
+      run: go test -tags=integration -p=1 -timeout 500s ./pulsar/connector ./pulsar/test

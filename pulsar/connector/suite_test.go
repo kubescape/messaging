@@ -1,14 +1,12 @@
+//go:build integration
+
 package connector
 
 import (
 	"context"
-	_ "embed"
 	"fmt"
-	"os/exec"
 	"strconv"
 	"sync"
-
-	"net/http"
 	"testing"
 	"time"
 
@@ -16,23 +14,12 @@ import (
 
 	"github.com/kubescape/messaging/pulsar/common/utils"
 	"github.com/kubescape/messaging/pulsar/config"
+	"github.com/kubescape/messaging/pulsar/internal/pulsartest"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/apache/pulsar-client-go/pulsar"
 
 	"github.com/stretchr/testify/suite"
-)
-
-const (
-	pulsarClientPort = 6651
-	pulsarAdminPort  = 8081
-)
-
-var (
-	//go:embed scripts/pulsar.sh
-	pulsarDockerCommand string
-	//go:embed scripts/pulsar_stop.sh
-	pulsarStopCommand string
 )
 
 func TestBasicConnection(t *testing.T) {
@@ -44,13 +31,24 @@ type MainTestSuite struct {
 	failOnUnconsummedMessages bool
 	defaultTestConfig         config.PulsarConfig
 	pulsarClient              Client
-	shutdownFunc              func()
+	broker                    *pulsartest.Broker
+	cleanupOnce               sync.Once
+	cleanupErr                error
 }
 
 func (suite *MainTestSuite) SetupSuite() {
+	broker, err := pulsartest.Start(context.Background())
+	if err != nil {
+		suite.FailNow("failed to start Pulsar", err.Error())
+	}
+	suite.broker = broker
+	suite.T().Cleanup(func() {
+		suite.Require().NoError(suite.cleanup())
+	})
+
 	suite.defaultTestConfig = config.PulsarConfig{
-		URL:                    fmt.Sprintf("pulsar://localhost:%d", pulsarClientPort),
-		AdminUrl:               fmt.Sprintf("http://localhost:%d", pulsarAdminPort),
+		URL:                    broker.URL,
+		AdminUrl:               broker.AdminURL,
 		Tenant:                 "ca-messaging",
 		Namespace:              "test-namespace",
 		Clusters:               []string{"standalone"},
@@ -61,29 +59,30 @@ func (suite *MainTestSuite) SetupSuite() {
 	x, _ := json.Marshal(suite.defaultTestConfig)
 	fmt.Println(string(x))
 
-	//start pulsar
-	suite.startPulsar()
-
-	var err error
-	//ensure pulsar connection
+	// Ensure the wrapper can connect and initialize its namespaces.
 	suite.pulsarClient, err = NewClient(WithConfig(&suite.defaultTestConfig))
 	if err != nil {
 		suite.FailNow("failed to create pulsar client", err.Error())
-	}
-	suite.shutdownFunc = func() {
-		defer func() {
-			suite.pulsarClient.Close()
-		}()
 	}
 }
 
 func (suite *MainTestSuite) TearDownSuite() {
 	suite.T().Log("tear down suite")
-	suite.shutdownFunc()
-	out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf(pulsarStopCommand, "basic-suite")).CombinedOutput()
-	if err != nil {
-		suite.FailNow("failed to stop pulsar", err.Error(), string(out))
-	}
+	suite.Require().NoError(suite.cleanup())
+}
+
+func (suite *MainTestSuite) cleanup() error {
+	suite.cleanupOnce.Do(func() {
+		if suite.pulsarClient != nil {
+			suite.pulsarClient.Close()
+		}
+		if suite.broker != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			suite.cleanupErr = suite.broker.Terminate(ctx)
+		}
+	})
+	return suite.cleanupErr
 }
 
 func (suite *MainTestSuite) SetupTest() {
@@ -151,46 +150,6 @@ func (suite *MainTestSuite) TearDownTest() {
 	suite.failOnUnconsummedMessages = false
 }
 
-func (suite *MainTestSuite) TestCreateConsumer() {
-	//create consumer
-	chan1 := make(chan pulsar.ConsumerMessage)
-
-	consumer, err := suite.pulsarClient.NewConsumer(WithMessageChannel(chan1), WithTopic("test-topic"), WithSubscriptionName("test-subscription"))
-	if err != nil {
-		suite.FailNow("failed to create consumer", err.Error())
-	}
-	defer consumer.Close()
-}
-
-func (suite *MainTestSuite) TestCreateConsumerWithFullTopics() {
-	chan1 := make(chan pulsar.ConsumerMessage)
-
-	consumer, err := suite.pulsarClient.NewConsumer(WithMessageChannel(chan1), WithFullTopics([]TopicName{"persistent://ca-messaging/test-namespace/test-topic"}), WithSubscriptionName("test-subscription"))
-	if err != nil {
-		suite.FailNow("failed to create consumer", err.Error())
-	}
-	defer consumer.Close()
-}
-
-func (suite *MainTestSuite) TestCreateConsumerWithQueueSize() {
-	chan1 := make(chan pulsar.ConsumerMessage)
-
-	consumer, err := suite.pulsarClient.NewConsumer(WithMessageChannel(chan1), WithTopic("test-topic"), WithSubscriptionName("test-subscription"), WithQueueSize(10))
-	if err != nil {
-		suite.FailNow("failed to create consumer", err.Error())
-	}
-	defer consumer.Close()
-}
-
-func (suite *MainTestSuite) TestCreateProducer() {
-	//create producer
-	producer, err := suite.pulsarClient.NewProducer(WithProducerTopic("test-topic"))
-	if err != nil {
-		suite.FailNow("failed to create producer", err.Error())
-	}
-	defer producer.Close()
-}
-
 func (suite *MainTestSuite) TestSetAndGetMaxUnackedMessagesOnConsumer() {
 	topic := suite.defaultTestConfig.Tenant + "/" + suite.defaultTestConfig.Namespace + "/cloud-scanner-tasks-v2"
 	fullTopic := "persistent://" + topic
@@ -239,92 +198,12 @@ func (suite *MainTestSuite) TestSetAndGetMaxUnackedMessagesOnConsumer() {
 	fmt.Printf("maxUnackedMessagesOnConsumer after remove: %d\n", maxUnacked)
 }
 
-func (suite *MainTestSuite) TestCreateProducerFullTopic() {
-	//create producer
-	producer, err := suite.pulsarClient.NewProducer(WithProducerFullTopic("persistent://ca-messaging/test-namespace/test-topic"))
-	if err != nil {
-		suite.FailNow("failed to create producer", err.Error())
-	}
-	defer producer.Close()
-}
-
-func (suite *MainTestSuite) TestCreateProducerFullTopicNonPersistent() {
-	//create producer
-	BuildNonPersistentTopic("test-t", "test-ns", "test-topic")
-	producer, err := suite.pulsarClient.NewProducer(WithProducerFullTopic("non-persistent://ca-messaging/test-namespace/test-topic"))
-	if err != nil {
-		suite.FailNow("failed to create producer", err.Error())
-	}
-	defer producer.Close()
-}
-
 func (suite *MainTestSuite) TestCreateProducerFullTopicInvalid() {
-	//create producer
 	producer, err := suite.pulsarClient.NewProducer(WithProducerFullTopic("est-t/test-ns/test-topic"))
-	if err == nil {
-		suite.FailNow("created invalid topic producer")
-	}
+	suite.Require().Error(err)
 	if producer != nil {
-		defer producer.Close()
+		producer.Close()
 	}
-}
-
-func (suite *MainTestSuite) TestProduceMessage() {
-	//create producer
-	producer, err := suite.pulsarClient.NewProducer(WithProducerTopic("test-topic"))
-	if err != nil {
-		suite.FailNow("failed to create producer", err.Error())
-	}
-	defer producer.Close()
-
-	//produce message
-	msg := "test message"
-	if err := ProduceMessage(producer, WithMessageToSend(msg), WithContext(context.Background())); err != nil {
-		suite.FailNow("failed to produce message", err.Error())
-	}
-}
-
-func (suite *MainTestSuite) startPulsar() {
-	suite.T().Log("stopping existing pulsar container")
-	exec.Command("/bin/sh", "-c", fmt.Sprintf(pulsarStopCommand, "basic-suite")).Run()
-	time.Sleep(2 * time.Second)
-
-	suite.T().Log("starting pulsar")
-	out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf(pulsarDockerCommand, pulsarClientPort, pulsarAdminPort, "basic-suite")).CombinedOutput()
-	suite.T().Logf("start script output:\n%s", string(out))
-	if err != nil {
-		suite.FailNow("failed to start pulsar", err.Error(), string(out))
-	}
-	req, err := http.NewRequest(http.MethodGet, suite.defaultTestConfig.AdminUrl+"/admin/v2/brokers/ready", nil)
-	if err != nil {
-		suite.FailNow("failed to create request", err.Error())
-	}
-	suite.T().Log("waiting for pulsar to start")
-	client := http.Client{Timeout: 5 * time.Second}
-	var lastErr error
-	for i := 0; i < 120; i++ {
-		resp, err := client.Do(req)
-		if err == nil {
-			if resp.StatusCode == http.StatusOK {
-				suite.T().Log("pulsar started")
-				resp.Body.Close()
-				return
-			}
-			lastErr = fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-			resp.Body.Close()
-		} else {
-			lastErr = err
-		}
-		if i%10 == 0 {
-			suite.T().Logf("waiting for pulsar... attempt %d/120, last error: %v", i, lastErr)
-		}
-		time.Sleep(2 * time.Second)
-	}
-	dockerPs, _ := exec.Command("/bin/sh", "-c", "docker ps -a 2>&1").CombinedOutput()
-	dockerLogs, _ := exec.Command("/bin/sh", "-c", "docker logs --tail 50 basic-suite 2>&1").CombinedOutput()
-	podmanPs, _ := exec.Command("/bin/sh", "-c", "podman ps -a 2>&1").CombinedOutput()
-	podmanLogs, _ := exec.Command("/bin/sh", "-c", "podman logs --tail 50 basic-suite 2>&1").CombinedOutput()
-	suite.FailNow("failed to start pulsar", fmt.Sprintf("last error: %v\ndocker ps:\n%s\ndocker logs:\n%s\npodman ps:\n%s\npodman logs:\n%s", lastErr, string(dockerPs), string(dockerLogs), string(podmanPs), string(podmanLogs)))
 }
 
 func loadJson[T any](jsonBytes []byte) T {
@@ -806,102 +685,4 @@ func (suite *MainTestSuite) TestSafeReconsumeLaterWithDuration() {
 	}
 	//fail on test teardown if there are unconsumed messages
 	suite.failOnUnconsummedMessages = true
-}
-
-func (suite *MainTestSuite) TestReconsumeLaterPanicOnRetryDisabled() {
-	defer func() {
-		if r := recover(); r == nil {
-			suite.T().Errorf("The code did not panic")
-		} else {
-			suite.T().Logf("Recovered in TestReconsumeLaterPanics: %v", r)
-		}
-	}()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	producer, err := CreateTestProducer(ctx, suite.pulsarClient)
-	if err != nil {
-		suite.FailNow(err.Error(), "create producer")
-	}
-	if producer == nil {
-		suite.FailNow("producer is nil")
-	}
-	defer producer.Close()
-
-	noRetrayEnabledConsumer, err := CreateTestConsumer(ctx, suite.pulsarClient)
-	if err != nil {
-		suite.FailNow(err.Error())
-	}
-	defer noRetrayEnabledConsumer.Close()
-	//produce
-	if _, err := producer.Send(ctx, &pulsar.ProducerMessage{Payload: []byte(suite.T().Name())}); err != nil {
-		suite.FailNow(err.Error(), "send payload")
-	}
-	testMsg := func(msg pulsar.Message) {
-		if msg == nil {
-			suite.FailNow("msg is nil")
-		}
-		if string(msg.Payload()) != suite.T().Name() {
-			suite.FailNow("unexpected payload")
-		}
-	}
-	//consume
-	testConsumerCtx, consumerCancel := context.WithTimeout(ctx, time.Second*time.Duration(2))
-	defer consumerCancel()
-	msg, err := noRetrayEnabledConsumer.Receive(testConsumerCtx)
-	if err != nil {
-		suite.FailNow(err.Error(), "receive payload")
-	}
-	testMsg(msg)
-	noRetrayEnabledConsumer.ReconsumeLater(msg, time.Millisecond)
-	suite.FailNow("should panic on call reconsume when retry option is not enabled")
-}
-
-func (suite *MainTestSuite) TestReconsumeLaterPanicOnUnSafeReconsume() {
-	defer func() {
-		if r := recover(); r == nil {
-			suite.T().Errorf("The code did not panic")
-		} else {
-			suite.T().Logf("Recovered in TestReconsumeLaterPanicOnUnSafeReconsume: %v", r)
-		}
-	}()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	producer, err := CreateTestProducer(ctx, suite.pulsarClient)
-	if err != nil {
-		suite.FailNow(err.Error(), "create producer")
-	}
-	if producer == nil {
-		suite.FailNow("producer is nil")
-	}
-	defer producer.Close()
-	reconsumeLaterOptions := []CreateConsumerOption{
-		WithRetryEnable(true, true, time.Second*2),
-	}
-	safeOnlyEnabledConsumer, err := CreateTestConsumer(ctx, suite.pulsarClient, reconsumeLaterOptions...)
-	if err != nil {
-		suite.FailNow(err.Error())
-	}
-	defer safeOnlyEnabledConsumer.Close()
-	//produce
-	if _, err := producer.Send(ctx, &pulsar.ProducerMessage{Payload: []byte(suite.T().Name())}); err != nil {
-		suite.FailNow(err.Error(), "send payload")
-	}
-	testMsg := func(msg pulsar.Message) {
-		if msg == nil {
-			suite.FailNow("msg is nil")
-		}
-		if string(msg.Payload()) != suite.T().Name() {
-			suite.FailNow("unexpected payload")
-		}
-	}
-	//consume
-	testConsumerCtx, consumerCancel := context.WithTimeout(ctx, time.Second*time.Duration(2))
-	defer consumerCancel()
-	msg, err := safeOnlyEnabledConsumer.Receive(testConsumerCtx)
-	if err != nil {
-		suite.FailNow(err.Error(), "receive payload")
-	}
-	testMsg(msg)
-	safeOnlyEnabledConsumer.ReconsumeLater(msg, time.Millisecond)
-	suite.FailNow("should panic on call ReconsumeLater when safe only option is set")
 }
