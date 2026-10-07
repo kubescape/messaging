@@ -23,6 +23,10 @@ type RuntimeIncidentIngesterOnFinishedMessage struct {
 	Response            *RuntimeIncidentResponse     `json:"response,omitempty"`
 	PolicyGUIDToName    map[string]string            `json:"policyGUIDToName"`
 	Classification      string                       `json:"classification,omitempty"`
+	// UserName and UserGroups identify the Kubernetes user behind the incident
+	// (admission alerts only, e.g. exec to pod)
+	UserName   string   `json:"userName,omitempty"`
+	UserGroups []string `json:"userGroups,omitempty"`
 }
 
 type RuntimeIncidentResponse struct {
