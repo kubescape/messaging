@@ -106,6 +106,11 @@ const (
 	UserInputCommandApplyAiSandbox      = UserInputCommand("apply-ai-sandbox")
 	UserInputCommandRemoveAiSandbox     = UserInputCommand("remove-ai-sandbox")
 
+	UserInputCommandCreateAiSandboxPolicy      = UserInputCommand("ai-sandbox-policy-create")
+	UserInputCommandUpdateAiSandboxPolicy      = UserInputCommand("ai-sandbox-policy-update")
+	UserInputCommandDeleteAiSandboxPolicy      = UserInputCommand("ai-sandbox-policy-delete")
+	UserInputCommandPutAiSandboxPolicySettings = UserInputCommand("ai-sandbox-policy-settings-put")
+
 	UserInputCommandDeleteSavedFilter = UserInputCommand("delete-saved-filter")
 	UserInputCommandUpdateSavedFilter = UserInputCommand("update-saved-filter")
 	UserInputCommandCreateSavedFilter = UserInputCommand("create-saved-filter")
