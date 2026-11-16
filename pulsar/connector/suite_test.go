@@ -12,7 +12,6 @@ import (
 
 	"encoding/json"
 
-	"github.com/kubescape/messaging/pulsar/common/utils"
 	"github.com/kubescape/messaging/pulsar/config"
 	"github.com/kubescape/messaging/pulsar/internal/pulsartest"
 	"golang.org/x/sync/errgroup"
@@ -268,7 +267,7 @@ func (suite *MainTestSuite) TestDLQ() {
 	defer cancel()
 
 	//create producer to input test payloads
-	pubsubCtx := utils.NewContextWithValues(ctx, "testConsumer")
+	pubsubCtx := ctx
 	producer, err := CreateTestProducer(pubsubCtx, suite.pulsarClient)
 	if err != nil {
 		suite.FailNow(err.Error(), "create producer")
