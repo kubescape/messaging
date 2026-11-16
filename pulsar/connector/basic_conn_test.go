@@ -6,10 +6,10 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
-	"github.com/kubescape/messaging/pulsar/common/utils"
 )
 
 type TestPayload interface {
@@ -52,7 +52,7 @@ func (suite *MainTestSuite) TestConsumerAndProducer() {
 	defer cancel()
 
 	//create producer to input test payloads
-	pubsubCtx := utils.NewContextWithValues(ctx, "testConsumer")
+	pubsubCtx := ctx
 	producer, err := CreateTestProducer(pubsubCtx, suite.pulsarClient)
 	if err != nil {
 		suite.FailNow(err.Error(), "create producer")
@@ -84,14 +84,11 @@ func CreateTestProducer(ctx context.Context, client Client) (pulsar.Producer, er
 
 	producer, err := client.NewProducer(WithProducerTopic(TestTopicName))
 
-	if err != nil && utils.IsProducerNameExistsError(testProducerName, err) {
+	if err != nil && strings.Contains(err.Error(), fmt.Sprintf("Producer with name '%s' is already connected to topic", testProducerName)) {
 		//other instance became the producer
 		return nil, nil
 	}
 
-	if producer != nil && err == nil {
-		utils.SetContextProducer(ctx, producer)
-	}
 	return producer, err
 }
 
